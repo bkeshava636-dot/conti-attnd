@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { GraduationCap } from 'lucide-react';
 import Navbar from './components/Navbar';
 import StudentDashboard from './components/StudentDashboard';
 import StudentSkeleton from './components/StudentSkeleton';
@@ -9,12 +10,12 @@ import Toast from './components/Toast';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('student'); // 'student' | 'proctor'
-  const [currentUSN, setCurrentUSN] = useState('3BR23CS001');
+  const [currentUSN, setCurrentUSN] = useState(() => localStorage.getItem('student_usn') || '');
   const [studentData, setStudentData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('student_usn')));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loginError, setLoginError] = useState(null);
-  const [showStudentLoginModal, setShowStudentLoginModal] = useState(false);
+  const [showStudentLoginModal, setShowStudentLoginModal] = useState(() => !localStorage.getItem('student_usn'));
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState('success');
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
@@ -81,18 +82,31 @@ export default function App() {
   };
 
   async function fetchStudentAttendance(usn) {
+    if (!usn || !usn.trim()) {
+      setLoading(false);
+      setShowStudentLoginModal(true);
+      return;
+    }
     setLoading(true);
     setLoginError(null);
     try {
-      const res = await fetch(`/api/attendance/student/${usn.toUpperCase()}`);
+      const cleanUsn = usn.trim().toUpperCase();
+      const res = await fetch(`/api/attendance/student/${cleanUsn}`);
       if (!res.ok) {
-        throw new Error(`Student ${usn} not found or no attendance has been synced yet.`);
+        throw new Error(`Student ${cleanUsn} not found. Please enter your correct BITM USN.`);
       }
       const data = await res.json();
+      if (!data || !data.student) {
+        throw new Error(`Student ${cleanUsn} not found. Please enter your correct BITM USN.`);
+      }
       setStudentData(data);
+      setCurrentUSN(cleanUsn);
+      localStorage.setItem('student_usn', cleanUsn);
       setShowStudentLoginModal(false);
+      setLoginError(null);
+      showNotification(`Attendance loaded for ${cleanUsn}`);
     } catch (err) {
-      setLoginError(err.message);
+      setLoginError(err.message || 'Student not found. Please enter your correct BITM USN.');
       setShowStudentLoginModal(true);
     } finally {
       setLoading(false);
@@ -150,7 +164,13 @@ export default function App() {
           }
         }}
         currentStudent={studentData?.student}
-        onLogoutStudent={() => setShowStudentLoginModal(true)}
+        onLogoutStudent={() => {
+          localStorage.removeItem('student_usn');
+          setCurrentUSN('');
+          setStudentData(null);
+          setLoginError(null);
+          setShowStudentLoginModal(true);
+        }}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         isProctorAuthenticated={Boolean(proctorToken)}
@@ -165,15 +185,32 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'student' ? (
-          loading && !studentData ? (
+          loading ? (
             <StudentSkeleton />
-          ) : (
+          ) : studentData ? (
             <StudentDashboard 
               data={studentData} 
               onRefresh={handleRefresh} 
               onNotify={showNotification}
               darkMode={darkMode}
             />
+          ) : (
+            <div className="py-20 text-center max-w-md mx-auto space-y-4 animate-in fade-in duration-300">
+              <div className="size-16 rounded-2xl bg-blue-600/10 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center">
+                <GraduationCap className="size-8" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Welcome to BITM Attendance</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Please enter your University Seat Number (USN) to view your course attendance and 85% eligibility status.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowStudentLoginModal(true)}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
+              >
+                Enter Student USN
+              </button>
+            </div>
           )
         ) : (
           <ProctorDashboard 
@@ -189,12 +226,9 @@ export default function App() {
       {/* Student Login Switcher Modal */}
       {showStudentLoginModal && (
         <LoginModal
-          onLogin={(usn) => {
-            setCurrentUSN(usn);
-            fetchStudentAttendance(usn);
-            showNotification(`Loaded attendance for ${usn}`);
-          }}
+          onLogin={(usn) => fetchStudentAttendance(usn)}
           error={loginError}
+          onClose={studentData ? () => setShowStudentLoginModal(false) : null}
         />
       )}
 
