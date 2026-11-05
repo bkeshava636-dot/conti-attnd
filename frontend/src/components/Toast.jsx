@@ -13,15 +13,15 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
   if (!message) return null;
 
   const icons = {
-    success: <CheckCircle2 className="size-4 text-emerald-600" aria-hidden="true" />,
-    error: <AlertCircle className="size-4 text-rose-600" aria-hidden="true" />,
-    info: <Info className="size-4 text-blue-600" aria-hidden="true" />
+    success: <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />,
+    error: <AlertCircle className="size-4 text-rose-600 dark:text-rose-400" aria-hidden="true" />,
+    info: <Info className="size-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
   };
 
   const bgStyles = {
-    success: 'bg-white border-emerald-200 text-slate-800 shadow-lg shadow-emerald-500/5',
-    error: 'bg-white border-rose-200 text-slate-800 shadow-lg shadow-rose-500/5',
-    info: 'bg-white border-blue-200 text-slate-800 shadow-lg shadow-blue-500/5'
+    success: 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-800 text-slate-800 dark:text-slate-100 shadow-xl shadow-emerald-500/5',
+    error: 'bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-800 text-slate-800 dark:text-slate-100 shadow-xl shadow-rose-500/5',
+    info: 'bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800 text-slate-800 dark:text-slate-100 shadow-xl shadow-blue-500/5'
   };
 
   return (
@@ -32,7 +32,7 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
         <button
           type="button"
           onClick={onClose}
-          className="ml-2 text-slate-400 hover:text-slate-600 size-5 flex items-center justify-center rounded"
+          className="ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 size-5 flex items-center justify-center rounded transition-colors"
           aria-label="Dismiss notification"
         >
           <X className="size-3.5" />

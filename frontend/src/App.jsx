@@ -18,6 +18,31 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState('success');
 
+  // Dark Mode State: default to true (Dark Mode) as requested
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved === 'dark';
+    return true; // Default dark mode
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      showNotification(next ? 'Dark mode enabled' : 'Light mode enabled', 'info');
+      return next;
+    });
+  };
+
   // Proctor Auth State
   const [proctorToken, setProctorToken] = useState(() => sessionStorage.getItem('proctor_session_token') || null);
   const [showProctorLoginModal, setShowProctorLoginModal] = useState(false);
@@ -91,7 +116,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50 text-slate-900 flex flex-col antialiased">
+    <div className="min-h-dvh bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 flex flex-col antialiased transition-colors duration-200">
       {/* Top Navigation */}
       <Navbar
         currentView={currentView}
@@ -109,6 +134,8 @@ export default function App() {
         isProctorAuthenticated={Boolean(proctorToken)}
         onOpenProctorLogin={handleOpenProctorLogin}
         onLogoutProctor={handleProctorLogout}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
       />
 
       {/* Main Content Area */}
@@ -121,6 +148,7 @@ export default function App() {
               data={studentData} 
               onRefresh={handleRefresh} 
               onNotify={showNotification}
+              darkMode={darkMode}
             />
           )
         ) : (
@@ -129,6 +157,7 @@ export default function App() {
             proctorToken={proctorToken}
             onRequireAuth={() => setShowProctorLoginModal(true)}
             onNotify={showNotification}
+            darkMode={darkMode}
           />
         )}
       </main>
@@ -161,15 +190,15 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-950 py-6 text-center text-xs text-slate-500 dark:text-slate-400 transition-colors">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
             Contineo Attendance Tracker • Ballari Institute of Technology &amp; Management
           </div>
-          <div className="flex items-center gap-4 text-slate-600">
-            <a href="/fixture" target="_blank" className="hover:text-slate-900 transition-colors">Contineo SIMS simulator</a>
+          <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
+            <a href="/fixture" target="_blank" className="hover:text-slate-900 dark:hover:text-white transition-colors">Contineo SIMS simulator</a>
             <span>•</span>
-            <a href="http://localhost:5000/api/health" target="_blank" className="hover:text-slate-900 transition-colors">API health</a>
+            <a href="http://localhost:5000/api/health" target="_blank" className="hover:text-slate-900 dark:hover:text-white transition-colors">API health</a>
           </div>
         </div>
       </footer>
