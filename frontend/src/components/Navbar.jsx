@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, GraduationCap, RotateCw, Lock, LogOut, Sun, Moon, Download } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Navbar({ 
   currentView, 
@@ -22,9 +23,7 @@ export default function Navbar({
         
         {/* Institutional Branding */}
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-lg bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center font-semibold text-xs tracking-wider shadow-xs" aria-hidden="true">
-            BITM
-          </div>
+          <Logo size={36} />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">Contineo Attendance</span>

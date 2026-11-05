@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GraduationCap, ArrowRight, AlertCircle, X, Loader2 } from 'lucide-react';
+import Logo from './Logo';
 
 export default function LoginModal({ onLogin, error, onClose }) {
   const [usnInput, setUsnInput] = useState('');
@@ -39,9 +40,7 @@ export default function LoginModal({ onLogin, error, onClose }) {
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="size-12 rounded-xl bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 shadow-xs" aria-hidden="true">
-            <GraduationCap className="size-6" />
-          </div>
+          <Logo size={52} className="mx-auto mb-3" />
           <h2 id="login-title" className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             Enter Your USN
           </h2>

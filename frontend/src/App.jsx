@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap } from 'lucide-react';
 import Navbar from './components/Navbar';
 import StudentDashboard from './components/StudentDashboard';
 import StudentSkeleton from './components/StudentSkeleton';
@@ -7,6 +6,7 @@ import ProctorDashboard from './components/ProctorDashboard';
 import LoginModal from './components/LoginModal';
 import ProctorLoginModal from './components/ProctorLoginModal';
 import Toast from './components/Toast';
+import Logo from './components/Logo';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('student'); // 'student' | 'proctor'
@@ -196,9 +196,7 @@ export default function App() {
             />
           ) : (
             <div className="py-20 text-center max-w-md mx-auto space-y-4 animate-in fade-in duration-300">
-              <div className="size-16 rounded-2xl bg-blue-600/10 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center">
-                <GraduationCap className="size-8" />
-              </div>
+              <Logo size={64} className="mx-auto" />
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Welcome to BITM Attendance</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Please enter your University Seat Number (USN) to view your course attendance and 85% eligibility status.
