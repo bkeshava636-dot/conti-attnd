@@ -137,6 +137,68 @@ async function runTests() {
   console.log(`- Total valid subject records verified: ${totalEntries}`);
   console.log('✅ PASS: 100% data integrity verified with zero out-of-bounds percentages!');
 
+  // ---------------------------------------------------------------------------
+  // SUITE 5: Variable Subject Counts (Never assume exactly 10 subjects)
+  // ---------------------------------------------------------------------------
+  console.log('\n[Audit 6] Testing Variable Subject Counts (8, 10, 11 subjects per student)...');
+  const variableSubjectHtml = `
+    <!DOCTYPE html><html><body>
+      <div class="student-section" data-usn="3BR23CS040">
+        <h3>STUDENT WITH EIGHT SUBJECTS</h3>
+        <p>USN: 3BR23CS040</p>
+        <table data-type="attendance-table">
+          <thead><tr><th>COURSE CODE</th><th>CIE</th><th>ATTENDANCE</th></tr></thead>
+          <tbody>
+            <tr><td>1BMCS301</td><td>IA1</td><td>90%</td></tr>
+            <tr><td>1BCS302</td><td>IA1</td><td>85%</td></tr>
+            <tr><td>1BCS303</td><td>IA1</td><td>80%</td></tr>
+            <tr><td>1BCS304</td><td>IA1</td><td>75%</td></tr>
+            <tr><td>1BCS305</td><td>IA1</td><td>85%</td></tr>
+            <tr><td>1BCS306L</td><td>IA1</td><td>100%</td></tr>
+            <tr><td>1BCS307L</td><td>IA1</td><td>95%</td></tr>
+            <tr><td>1BCS308L</td><td>IA1</td><td>90%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="student-section" data-usn="3BR23CS041">
+        <h3>STUDENT WITH ELEVEN SUBJECTS</h3>
+        <p>USN: 3BR23CS041</p>
+        <table data-type="attendance-table">
+          <thead><tr><th>COURSE CODE</th><th>CIE</th><th>ATTENDANCE</th></tr></thead>
+          <tbody>
+            <tr><td>1BMCS301</td><td>IA1</td><td>92%</td></tr>
+            <tr><td>1BCS302</td><td>IA1</td><td>88%</td></tr>
+            <tr><td>1BCS303</td><td>IA1</td><td>84%</td></tr>
+            <tr><td>1BCS304</td><td>IA1</td><td>79%</td></tr>
+            <tr><td>1BCS305</td><td>IA1</td><td>89%</td></tr>
+            <tr><td>1BCS306L</td><td>IA1</td><td>100%</td></tr>
+            <tr><td>1BCS307L</td><td>IA1</td><td>85%</td></tr>
+            <tr><td>1BCS308L</td><td>IA1</td><td>100%</td></tr>
+            <tr><td>1BCSCP310</td><td>IA1</td><td>70%</td></tr>
+            <tr><td>1BPSW309</td><td>IA1</td><td>82%</td></tr>
+            <tr><td>1BKAN311</td><td>IA1</td><td>95%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </body></html>
+  `;
+
+  const varDom = new JSDOM(variableSubjectHtml);
+  const varReport = extractAllStudents(varDom.window.document);
+
+  console.log(`- Students Detected: ${varReport.totalDetected}`);
+  const s8 = varReport.students.find(s => s.usn === '3BR23CS040');
+  const s11 = varReport.students.find(s => s.usn === '3BR23CS041');
+
+  console.log(`- Student 3BR23CS040 Subject Count: ${s8?.subjects.length} (Expected: 8)`);
+  console.log(`- Student 3BR23CS041 Subject Count: ${s11?.subjects.length} (Expected: 11)`);
+
+  if (s8?.subjects.length !== 8 || s11?.subjects.length !== 11) {
+    console.error('❌ FAIL: Variable subject count failed!');
+    process.exit(1);
+  }
+  console.log('✅ PASS: Parser dynamically and accurately extracts variable subject counts without assuming 10!');
+
   console.log('\n====================================================');
   console.log('  ALL AUDIT SUITES PASSED (0 ERRORS)');
   console.log('====================================================');

@@ -1,6 +1,6 @@
 /**
  * Contineo Attendance Collector - Popup Controller
- * Manages one-click extraction, backend publishing, progress, and reports.
+ * Manages one-click extraction, backend publishing, progress, diagnostics, and reports.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     proctorToken: 'demo-proctor-secret-key-bitm'
   };
   let activeTab = null;
-  let detectedStudents = [];
   let isProcessing = false;
 
   // Load config from chrome.storage
@@ -93,9 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   linkOpenTestFixture.addEventListener('click', async (e) => {
     e.preventDefault();
-    // Open fixture file in local tab or via server
-    const fixtureUrl = chrome.runtime.getURL('../test-fixtures/contineo-sims-fixture.html');
-    // Also support http-served fixture if backend running
     await chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
   });
 
@@ -141,12 +137,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (!isContineo) {
         setPortalState('Standby', 'warning', 'Open BITM Contineo portal or test fixture');
-        btnCollect.disabled = true;
+        btnCollect.disabled = false;
         btnActionText.textContent = 'OPEN CONTINEO PORTAL';
         btnCollect.onclick = () => {
           chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
         };
-        btnCollect.disabled = false;
         return;
       }
 
@@ -188,12 +183,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return new Promise((resolve) => {
       chrome.tabs.sendMessage(tabId, { action: 'PING' }, (res) => {
         if (chrome.runtime.lastError || !res || res.status !== 'PONG') {
-          // Inject script dynamically
           chrome.scripting.executeScript({
             target: { tabId },
             files: ['content.js']
           }, () => {
-            // Short delay for script initialize
             setTimeout(resolve, 150);
           });
         } else {
@@ -205,10 +198,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * THE ONE-CLICK WORKFLOW
-   * 1. Extract from DOM
-   * 2. Validate
-   * 3. Publish to Backend
-   * 4. Display Report
+   * 1. Extract from DOM with bounded DOM slices
+   * 2. Strict client-side validation
+   * 3. Safe Publish to Backend
+   * 4. Display Diagnostic & Success Report
    */
   async function handleOneClickWorkflow() {
     if (isProcessing || !activeTab) return;
@@ -219,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     progressContainer.classList.remove('hidden');
     resultNotice.classList.add('hidden');
 
-    updateProgress(15, 'Reading Contineo DOM...');
+    updateProgress(15, 'Scanning Contineo DOM...');
 
     try {
       // Step 1: Send extraction command to content script
@@ -236,24 +229,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         throw new Error('No valid student attendance records could be extracted from page.');
       }
 
-      const { students, warnings, errors: extractionErrors } = extractionResponse.report;
-      detectedStudents = students;
+      const { students, warnings, errors: extractionErrors, diagnostics } = extractionResponse.report;
 
-      updateProgress(45, `Extracted ${students.length} students. Validating schema...`);
+      updateProgress(40, `Extracted ${students.length} students. Performing strict verification...`);
 
-      // Client-side quick validation summary
+      // Step 2: Strict Client-Side Pre-Publish Validation
+      const USN_PATTERN = /^[1-4][A-Z0-9]{2}\d{2}[A-Z0-9]{2,3}\d{2,3}$/i;
+      const validStudents = [];
+      const quarantinedStudents = [];
+
+      students.forEach(st => {
+        let isRecordValid = true;
+        const reasons = [];
+
+        if (!st.usn || !USN_PATTERN.test(st.usn)) {
+          isRecordValid = false;
+          reasons.push(`Invalid USN: ${st.usn}`);
+        }
+
+        if (!st.subjects || !Array.isArray(st.subjects) || st.subjects.length === 0) {
+          isRecordValid = false;
+          reasons.push('Zero subjects extracted');
+        } else {
+          for (const sub of st.subjects) {
+            if (!sub.course_code) {
+              isRecordValid = false;
+              reasons.push('Missing course code');
+              break;
+            }
+            if (typeof sub.attendance_percentage !== 'number' || sub.attendance_percentage < 0 || sub.attendance_percentage > 100) {
+              isRecordValid = false;
+              reasons.push(`Percentage out of bounds on ${sub.course_code}`);
+              break;
+            }
+          }
+        }
+
+        if (isRecordValid) {
+          validStudents.push(st);
+        } else {
+          quarantinedStudents.push({ usn: st.usn || 'UNKNOWN', reasons });
+        }
+      });
+
+      if (validStudents.length === 0) {
+        throw new Error(`All ${students.length} detected records failed strict verification.`);
+      }
+
       let totalSubjects = 0;
-      students.forEach(s => totalSubjects += s.subjects.length);
+      validStudents.forEach(s => totalSubjects += s.subjects.length);
 
-      updateProgress(65, `Publishing ${students.length} records (${totalSubjects} subject entries) to backend...`);
+      updateProgress(65, `Publishing ${validStudents.length} validated records (${totalSubjects} subjects) to backend...`);
 
-      // Step 2: Push to Backend API
+      // Step 3: Push to Backend API
       const payload = {
         proctorId: 'proctor-bitm-cse-01',
-        semester: students[0]?.semester || 'SEM03',
+        semester: validStudents[0]?.semester || 'SEM03',
         sourceUrl: activeTab.url,
         extractedAt: new Date().toISOString(),
-        students: students
+        students: validStudents,
+        diagnostics: {
+          totalDetected: diagnostics?.totalSectionsDetected || students.length,
+          quarantinedCount: quarantinedStudents.length,
+          quarantined: quarantinedStudents
+        }
       };
 
       const res = await fetch(`${config.backendUrl}/api/attendance/publish`, {
@@ -273,24 +312,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       const publishResult = await res.json();
       updateProgress(100, 'Publishing completed successfully!');
 
-      // Step 3: Update Metrics
+      // Step 4: Update Metrics
       valProcessed.textContent = `${publishResult.totalProcessed}/${publishResult.totalProcessed}`;
       valSuccessful.textContent = publishResult.successfulRecords;
       valDuplicates.textContent = publishResult.duplicatesHandled || 0;
-      valFailed.textContent = publishResult.failedRecords || 0;
+      valFailed.textContent = (publishResult.failedRecords || 0) + quarantinedStudents.length;
 
       // Show Result Notice
       resultNotice.className = 'result-notice success';
-      resultNotice.innerHTML = `
+      let noticeHtml = `
         <strong>Collection Completed!</strong><br>
         Students Processed: <strong>${publishResult.successfulRecords}/${publishResult.totalProcessed}</strong><br>
         Records Published: <strong>${publishResult.successfulRecords}</strong><br>
         <span style="font-size: 11px; opacity: 0.9;">Last Updated: ${new Date().toLocaleTimeString()}</span>
       `;
+
+      if (quarantinedStudents.length > 0) {
+        noticeHtml += `<br><span style="color: #fcd34d; font-size: 10px;">⚠️ ${quarantinedStudents.length} record(s) quarantined due to schema validation.</span>`;
+      }
+
+      resultNotice.innerHTML = noticeHtml;
       resultNotice.classList.remove('hidden');
 
       // Render records list in accordion
-      renderRecordsList(students);
+      renderRecordsList(validStudents);
       recordsContent.classList.remove('hidden');
       accordionArrow.textContent = '▲';
 
@@ -301,8 +346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           processed: publishResult.totalProcessed,
           successful: publishResult.successfulRecords,
           duplicates: publishResult.duplicatesHandled,
-          failed: publishResult.failedRecords,
-          students: students
+          failed: (publishResult.failedRecords || 0) + quarantinedStudents.length,
+          students: validStudents
         }
       });
 
@@ -314,13 +359,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, 2500);
 
     } catch (err) {
-      console.error('Workflow error:', err);
+      console.error('[Contineo Error]:', err);
       updateProgress(100, 'Workflow stopped with errors');
       resultNotice.className = 'result-notice error';
       resultNotice.innerHTML = `
         <strong>Collection Incomplete</strong><br>
         ${err.message}<br>
-        <span style="font-size: 10px;">Check backend connection or page structure.</span>
+        <span style="font-size: 10px;">Check browser console for detailed diagnostic logs.</span>
       `;
       resultNotice.classList.remove('hidden');
 
@@ -348,14 +393,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       row.className = 'record-row';
 
       const pctClass = st.overallPercentage >= 85 ? 'pct-high' : (st.overallPercentage >= 75 ? 'pct-mid' : 'pct-low');
+      const subCountText = `${st.subjects.length} sub`;
 
       row.innerHTML = `
         <span class="record-usn">${st.usn}</span>
-        <span class="record-name" title="${st.name}">${st.name}</span>
+        <span class="record-name" title="${st.name}">${st.name} <span style="font-size: 9px; opacity: 0.7;">(${subCountText})</span></span>
         <span class="record-pct ${pctClass}">${st.overallPercentage}%</span>
       `;
 
-      // Allow clicking on student to scroll to them in Contineo tab
       row.style.cursor = 'pointer';
       row.title = 'Click to highlight student in Contineo tab';
       row.addEventListener('click', () => {

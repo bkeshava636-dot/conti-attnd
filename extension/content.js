@@ -26,7 +26,7 @@
   }
 
   /**
-   * Main extraction engine
+   * Main extraction engine with Diagnostic Logging & Strict Verification
    */
   function extractAllStudents(doc = document) {
     const report = {
@@ -39,22 +39,38 @@
       duplicatesHandled: 0,
       students: [],
       errors: [],
-      warnings: []
+      warnings: [],
+      diagnostics: {
+        totalSectionsDetected: 0,
+        validStudents: 0,
+        failedSections: [],
+        subjectCounts: {},
+        courseCodesDetected: new Set(),
+        attendancePercentagesRange: { min: 100, max: 0 },
+        summary: []
+      }
     };
 
     try {
       // Find all candidate attendance tables on the page
       const allTables = Array.from(doc.querySelectorAll('table'));
       const attendanceTables = allTables.filter(table => isAttendanceTable(table));
+      report.diagnostics.totalSectionsDetected = attendanceTables.length;
 
       if (attendanceTables.length === 0) {
         // Fallback: Check if there are container sections marked as student-section or similar
         const studentSections = Array.from(doc.querySelectorAll('.student-section, [data-usn], .counselling-student-card'));
+        report.diagnostics.totalSectionsDetected = studentSections.length;
+
         if (studentSections.length > 0) {
           studentSections.forEach((section, index) => {
             const student = extractFromStudentContainer(section, index + 1);
-            if (student && student.usn) {
+            if (student && student.usn && student.subjects && student.subjects.length > 0) {
               report.students.push(student);
+            } else {
+              const reason = student?.error || 'Invalid student container or missing subjects';
+              report.errors.push({ index: index + 1, error: reason });
+              report.diagnostics.failedSections.push({ index: index + 1, reason });
             }
           });
         } else {
@@ -66,19 +82,25 @@
           try {
             const previousTable = index > 0 ? attendanceTables[index - 1] : null;
             const studentData = parseStudentFromTableContext(table, previousTable, doc, index + 1);
-            if (studentData && studentData.usn && studentData.subjects.length > 0) {
+
+            if (studentData && !studentData.error && studentData.usn && studentData.subjects && studentData.subjects.length > 0) {
               report.students.push(studentData);
             } else {
+              const reason = studentData?.error || 'Could not associate attendance table with valid USN or subjects';
               report.errors.push({
                 index: index + 1,
-                error: studentData?.error || 'Could not associate attendance table with a valid student USN or subjects'
+                error: reason
+              });
+              report.diagnostics.failedSections.push({
+                index: index + 1,
+                reason,
+                elementTag: table.tagName
               });
             }
           } catch (err) {
-            report.errors.push({
-              index: index + 1,
-              error: `Table parse error on table ${index + 1}: ${err.message}`
-            });
+            const reason = `Table parse error on section ${index + 1}: ${err.message}`;
+            report.errors.push({ index: index + 1, error: reason });
+            report.diagnostics.failedSections.push({ index: index + 1, reason });
           }
         });
       }
@@ -102,10 +124,41 @@
         report.duplicatesHandled = duplicateUSNs.length;
       }
 
+      // Strict verification of each student
+      uniqueStudents.forEach(st => {
+        // Track subject counts (dynamic: 8, 9, 10, etc.)
+        const count = st.subjects.length;
+        report.diagnostics.subjectCounts[count] = (report.diagnostics.subjectCounts[count] || 0) + 1;
+
+        if (count < 4) {
+          report.warnings.push(`Student ${st.usn} has unusually low subject count (${count}). Flagged for review.`);
+        }
+
+        st.subjects.forEach(sub => {
+          report.diagnostics.courseCodesDetected.add(sub.course_code);
+          const p = sub.attendance_percentage;
+          if (p < report.diagnostics.attendancePercentagesRange.min) report.diagnostics.attendancePercentagesRange.min = p;
+          if (p > report.diagnostics.attendancePercentagesRange.max) report.diagnostics.attendancePercentagesRange.max = p;
+        });
+
+        report.diagnostics.summary.push({
+          usn: st.usn,
+          name: st.name,
+          subjectCount: st.subjects.length,
+          overallPercentage: `${st.overallPercentage}%`,
+          courseCodes: st.subjects.map(sub => sub.course_code).join(', ')
+        });
+      });
+
       report.students = uniqueStudents;
       report.totalDetected = uniqueStudents.length;
       report.successfulRecords = uniqueStudents.length;
       report.failedRecords = report.errors.length;
+      report.diagnostics.validStudents = uniqueStudents.length;
+      report.diagnostics.courseCodesDetected = Array.from(report.diagnostics.courseCodesDetected);
+
+      // Safe Diagnostic Console Logging (Never logs cookies, tokens, or passwords)
+      outputSafeDiagnosticLogs(report);
 
     } catch (globalErr) {
       report.errors.push({
@@ -116,6 +169,43 @@
     }
 
     return report;
+  }
+
+  /**
+   * Safe Diagnostic Logger for Browser Console
+   */
+  function outputSafeDiagnosticLogs(report) {
+    if (typeof console === 'undefined') return;
+
+    try {
+      console.groupCollapsed(
+        `%c[Contineo Diagnostics] Attendance Extraction Audit (%c${report.successfulRecords} Extracted%c, %c${report.failedRecords} Failed%c)`,
+        'color: #0284c7; font-weight: bold;',
+        'color: #10b981; font-weight: bold;',
+        'color: #0284c7;',
+        report.failedRecords > 0 ? 'color: #ef4444; font-weight: bold;' : 'color: #64748b;',
+        'color: #0284c7;'
+      );
+
+      console.log('📌 Total Sections Detected:', report.diagnostics.totalSectionsDetected);
+      console.log('✅ Successfully Parsed Students:', report.successfulRecords);
+      console.log('⚠️ Failed / Incomplete Sections:', report.failedRecords);
+      console.log('📚 Course Codes Detected:', report.diagnostics.courseCodesDetected);
+      console.log('📊 Attendance Percentage Range:', `${report.diagnostics.attendancePercentagesRange.min}% to ${report.diagnostics.attendancePercentagesRange.max}%`);
+      console.log('📈 Subject Count Distribution:', report.diagnostics.subjectCounts);
+
+      if (report.diagnostics.summary.length > 0) {
+        console.table(report.diagnostics.summary);
+      }
+
+      if (report.diagnostics.failedSections.length > 0) {
+        console.warn('❌ Failed Sections Breakdown (Zero credentials logged):', report.diagnostics.failedSections);
+      }
+
+      console.groupEnd();
+    } catch (e) {
+      // Ignore console logging errors in constrained sandboxes
+    }
   }
 
   /**
@@ -169,7 +259,6 @@
         if (text) {
           sliceText += ' ' + text;
           
-          // Check for candidate student names (heading elements, bold text, or spans near images)
           const tag = node.tagName?.toLowerCase();
           if (['h2', 'h3', 'h4', 'strong', 'b', 'span'].includes(tag) || (node.classList && (node.classList.contains('name') || node.classList.contains('student-name')))) {
             const clean = text.replace(/USN.*$/i, '').trim();
@@ -200,7 +289,7 @@
     // Validation checks
     if (!usn) {
       return {
-        error: `Could not identify USN for student section ${index}`
+        error: `Could not identify valid USN in student section ${index}`
       };
     }
 
@@ -255,7 +344,6 @@
         break; // Reached end boundary
       }
 
-      // Collect elements in this bounded range
       nodes.push(curr);
     }
 
@@ -395,6 +483,10 @@
           success: true,
           count: result.students.length,
           pageTitle: result.pageTitle,
+          diagnostics: {
+            sectionsDetected: result.diagnostics.totalSectionsDetected,
+            failedCount: result.diagnostics.failedSections.length
+          },
           warning: result.warnings.length > 0 ? result.warnings[0] : null
         });
         return true;
