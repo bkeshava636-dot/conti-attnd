@@ -399,7 +399,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                   {processedSubjects.map(sub => {
-                    const buffer = calculateCourseBuffer(sub.attendance_percentage);
                     return (
                       <tr key={sub.course_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 dark:text-white">
@@ -442,7 +441,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
             {/* Mobile Cards View */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
               {processedSubjects.map(sub => {
-                const buffer = calculateCourseBuffer(sub.attendance_percentage);
                 return (
                   <div key={sub.course_code} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
