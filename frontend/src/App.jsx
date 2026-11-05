@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import StudentDashboard from './components/StudentDashboard';
 import ProctorDashboard from './components/ProctorDashboard';
 import LoginModal from './components/LoginModal';
+import ProctorLoginModal from './components/ProctorLoginModal';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('student'); // 'student' | 'proctor'
@@ -11,7 +12,11 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loginError, setLoginError] = useState(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showStudentLoginModal, setShowStudentLoginModal] = useState(false);
+
+  // Proctor Auth State
+  const [proctorToken, setProctorToken] = useState(() => sessionStorage.getItem('proctor_session_token') || null);
+  const [showProctorLoginModal, setShowProctorLoginModal] = useState(false);
 
   useEffect(() => {
     if (currentUSN) {
@@ -29,10 +34,10 @@ export default function App() {
       }
       const data = await res.json();
       setStudentData(data);
-      setShowLoginModal(false);
+      setShowStudentLoginModal(false);
     } catch (err) {
       setLoginError(err.message);
-      setShowLoginModal(true);
+      setShowStudentLoginModal(true);
     } finally {
       setLoading(false);
     }
@@ -51,16 +56,46 @@ export default function App() {
     setCurrentView('student');
   };
 
+  const handleOpenProctorLogin = () => {
+    if (proctorToken) {
+      setCurrentView('proctor');
+    } else {
+      setShowProctorLoginModal(true);
+    }
+  };
+
+  const handleProctorLoginSuccess = (token) => {
+    sessionStorage.setItem('proctor_session_token', token);
+    setProctorToken(token);
+    setShowProctorLoginModal(false);
+    setCurrentView('proctor');
+  };
+
+  const handleProctorLogout = () => {
+    sessionStorage.removeItem('proctor_session_token');
+    setProctorToken(null);
+    setCurrentView('student');
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top Navigation */}
       <Navbar
         currentView={currentView}
-        setCurrentView={setCurrentView}
+        setCurrentView={(view) => {
+          if (view === 'proctor' && !proctorToken) {
+            setShowProctorLoginModal(true);
+          } else {
+            setCurrentView(view);
+          }
+        }}
         currentStudent={studentData?.student}
-        onLogout={() => setShowLoginModal(true)}
+        onLogoutStudent={() => setShowStudentLoginModal(true)}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
+        isProctorAuthenticated={Boolean(proctorToken)}
+        onOpenProctorLogin={handleOpenProctorLogin}
+        onLogoutProctor={handleProctorLogout}
       />
 
       {/* Main Content Area */}
@@ -75,18 +110,30 @@ export default function App() {
             <StudentDashboard data={studentData} onRefresh={handleRefresh} />
           )
         ) : (
-          <ProctorDashboard onSelectStudent={handleSelectStudentFromProctor} />
+          <ProctorDashboard 
+            onSelectStudent={handleSelectStudentFromProctor}
+            proctorToken={proctorToken}
+            onRequireAuth={() => setShowProctorLoginModal(true)}
+          />
         )}
       </main>
 
       {/* Student Login Switcher Modal */}
-      {showLoginModal && (
+      {showStudentLoginModal && (
         <LoginModal
           onLogin={(usn) => {
             setCurrentUSN(usn);
             fetchStudentAttendance(usn);
           }}
           error={loginError}
+        />
+      )}
+
+      {/* Proctor Security Verification Modal */}
+      {showProctorLoginModal && (
+        <ProctorLoginModal
+          onClose={() => setShowProctorLoginModal(false)}
+          onSuccess={handleProctorLoginSuccess}
         />
       )}
 

@@ -68,8 +68,20 @@ async function runSecurityAudit() {
   }
   console.log('✅ PASS: Forged token blocked (HTTP 403)!');
 
-  // 2c: Test Ephemeral Proctor Login
-  console.log('\n[Security Check 3] Testing ephemeral proctor session token issuance & validation...');
+  // 2c: Test Protected Proctor Roster & Imports Access
+  console.log('\n[Security Check 3] Testing that proctor roster and import endpoints are blocked for public/students...');
+  const unauthRoster = await fetch('http://localhost:5000/api/proctor/roster');
+  const unauthImports = await fetch('http://localhost:5000/api/proctor/imports');
+  console.log(`- Unauthenticated /proctor/roster status: HTTP ${unauthRoster.status} (Expected: 401)`);
+  console.log(`- Unauthenticated /proctor/imports status: HTTP ${unauthImports.status} (Expected: 401)`);
+  if (unauthRoster.status !== 401 || unauthImports.status !== 401) {
+    console.error('❌ FAIL: Proctor roster/imports accessible without authentication!');
+    process.exit(1);
+  }
+  console.log('✅ PASS: Public/students are blocked from accessing the proctor roster & imports!');
+
+  // 2d: Test Ephemeral Proctor Login
+  console.log('\n[Security Check 4] Testing ephemeral proctor session token issuance & validation...');
   const loginRes = await fetch('http://localhost:5000/api/auth/proctor-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -82,7 +94,17 @@ async function runSecurityAudit() {
     process.exit(1);
   }
 
-  // 2d: Verify /publish works with the ephemeral token
+  // 2e: Verify /publish and /proctor/roster work with the ephemeral token
+  const authRoster = await fetch('http://localhost:5000/api/proctor/roster', {
+    headers: { 'Authorization': `Bearer ${loginData.token}` }
+  });
+  console.log(`- Authenticated /proctor/roster status: HTTP ${authRoster.status} (Expected: 200)`);
+  if (authRoster.status !== 200) {
+    console.error('❌ FAIL: Authenticated proctor could not access roster');
+    process.exit(1);
+  }
+  console.log('✅ PASS: Authenticated proctor granted access to roster!');
+
   const ephemeralRes = await fetch('http://localhost:5000/api/attendance/publish', {
     method: 'POST',
     headers: {
@@ -107,8 +129,8 @@ async function runSecurityAudit() {
   }
   console.log('✅ PASS: Ephemeral proctor authorization verified successfully!');
 
-  // Check 4: Test Malformed and Out-of-Bounds Payload Rejection
-  console.log('\n[Security Check 4] Testing malicious / out-of-bounds attendance rejection...');
+  // Check 5: Test Malformed and Out-of-Bounds Payload Rejection
+  console.log('\n[Security Check 5] Testing malicious / out-of-bounds attendance rejection...');
   const malformedRes = await fetch('http://localhost:5000/api/attendance/publish', {
     method: 'POST',
     headers: {

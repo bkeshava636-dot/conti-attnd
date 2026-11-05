@@ -247,9 +247,9 @@ app.post('/api/auth/student-login', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// PROCTOR / ADMIN ENDPOINTS
+// PROCTOR / ADMIN ENDPOINTS (Protected with requireProctorAuth)
 // -----------------------------------------------------------------------------
-app.get('/api/proctor/roster', async (req, res) => {
+app.get('/api/proctor/roster', requireProctorAuth, async (req, res) => {
   try {
     const roster = await repo.getProctorRoster('proctor-bitm-cse-01');
     res.json({
@@ -261,7 +261,7 @@ app.get('/api/proctor/roster', async (req, res) => {
   }
 });
 
-app.get('/api/proctor/imports', async (req, res) => {
+app.get('/api/proctor/imports', requireProctorAuth, async (req, res) => {
   try {
     const imports = await repo.getImportsHistory();
     res.json({ count: imports.length, imports });

@@ -13,7 +13,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 
-export default function ProctorDashboard({ onSelectStudent }) {
+export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequireAuth }) {
   const [roster, setRoster] = useState([]);
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,20 +23,38 @@ export default function ProctorDashboard({ onSelectStudent }) {
 
   useEffect(() => {
     loadProctorData();
-  }, []);
+  }, [proctorToken]);
 
   async function loadProctorData() {
     setLoading(true);
     try {
+      if (!proctorToken) {
+        onRequireAuth?.();
+        return;
+      }
+
+      const authHeaders = {
+        'Authorization': `Bearer ${proctorToken}`
+      };
+
       const [rosterRes, importsRes] = await Promise.all([
-        fetch('/api/proctor/roster').then(r => r.json()),
-        fetch('/api/proctor/imports').then(r => r.json())
+        fetch('/api/proctor/roster', { headers: authHeaders }).then(async r => {
+          if (r.status === 401 || r.status === 403) throw new Error('AUTH_REQUIRED');
+          return r.json();
+        }),
+        fetch('/api/proctor/imports', { headers: authHeaders }).then(async r => {
+          if (r.status === 401 || r.status === 403) throw new Error('AUTH_REQUIRED');
+          return r.json();
+        })
       ]);
 
       if (rosterRes.roster) setRoster(rosterRes.roster);
       if (importsRes.imports) setImports(importsRes.imports);
     } catch (err) {
       console.error('Failed to load proctor data:', err);
+      if (err.message === 'AUTH_REQUIRED') {
+        onRequireAuth?.();
+      }
     } finally {
       setLoading(false);
     }

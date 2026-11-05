@@ -6,7 +6,7 @@
       "semester": "SEM03",
       "department": "Computer Science & Engineering",
       "proctor_id": "proctor-bitm-cse-01",
-      "updated_at": "2026-11-05T14:15:28.730Z"
+      "updated_at": "2026-11-05T15:16:43.079Z"
     },
     "3BR23CS002": {
       "usn": "3BR23CS002",
@@ -197,7 +197,7 @@
       "attendance_percentage": 91,
       "cie_info": "N/A",
       "academic_period": "2026-27 ODD",
-      "updated_at": "2026-11-05T14:15:28.730Z"
+      "updated_at": "2026-11-05T15:16:43.079Z"
     },
     "3BR23CS001_1BCS302_2026-27 ODD": {
       "usn": "3BR23CS001",
@@ -2172,6 +2172,19 @@
     }
   },
   "imports": [
+    {
+      "id": "imp_1793891803081",
+      "proctor_id": "proctor-bitm-cse-01",
+      "total_students": 1,
+      "successful_records": 1,
+      "failed_records": 0,
+      "academic_period": "2026-27 ODD",
+      "imported_at": "2026-11-05T15:16:43.079Z",
+      "status": "COMPLETED",
+      "logs": {
+        "errors": []
+      }
+    },
     {
       "id": "imp_1793888128738",
       "proctor_id": "proctor-bitm-cse-01",
