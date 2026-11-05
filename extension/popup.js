@@ -39,6 +39,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSaveSettings = document.getElementById('btn-save-settings');
   const linkOpenTestFixture = document.getElementById('link-open-test-fixture');
 
+  // Theme Toggle Elements
+  const btnThemeToggle = document.getElementById('btn-theme-toggle');
+  const iconThemeSun = document.getElementById('icon-theme-sun');
+  const iconThemeMoon = document.getElementById('icon-theme-moon');
+
+  // Filter Chip Elements
+  const filterChipAll = document.getElementById('filter-chip-all');
+  const filterChipShortage = document.getElementById('filter-chip-shortage');
+  const filterChipSafe = document.getElementById('filter-chip-safe');
+  const countChipAll = document.getElementById('count-chip-all');
+  const countChipShortage = document.getElementById('count-chip-shortage');
+  const countChipSafe = document.getElementById('count-chip-safe');
+
   // Auto-Sync Elements
   const toggleAutosync = document.getElementById('toggle-autosync');
   const selectSyncInterval = document.getElementById('select-sync-interval');
@@ -52,6 +65,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   let activeTab = null;
   let isProcessing = false;
+  let currentTheme = 'dark';
+  let cachedStudentsList = [];
+  let currentCourseFilter = 'ALL';
 
   const detectionHelper = document.getElementById('detection-helper');
   const linkHelperFixture = document.getElementById('link-helper-fixture');
@@ -63,11 +79,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Load config from chrome.storage
+  // Load config and theme from chrome.storage
   const stored = await chrome.storage.local.get([
     'backendUrl', 
     'proctorToken', 
     'lastReport',
+    'theme',
     'autoSyncEnabled',
     'autoSyncInterval',
     'lastAutoSyncTimestamp',
@@ -78,6 +95,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   inputBackendUrl.value = config.backendUrl;
   inputProctorToken.value = config.proctorToken;
+
+  // Initialize Theme
+  currentTheme = stored.theme || 'dark';
+  applyTheme(currentTheme);
+
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener('click', async () => {
+      const next = currentTheme === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+      await chrome.storage.local.set({ theme: next });
+    });
+  }
+
+  function applyTheme(theme) {
+    currentTheme = theme;
+    if (theme === 'light') {
+      document.body.classList.add('theme-light');
+      if (iconThemeSun) iconThemeSun.classList.remove('hidden');
+      if (iconThemeMoon) iconThemeMoon.classList.add('hidden');
+    } else {
+      document.body.classList.remove('theme-light');
+      if (iconThemeSun) iconThemeSun.classList.add('hidden');
+      if (iconThemeMoon) iconThemeMoon.classList.remove('hidden');
+    }
+  }
 
   // Restore Auto-Sync state
   if (selectSyncInterval && stored.autoSyncInterval) {
@@ -466,35 +508,124 @@ document.addEventListener('DOMContentLoaded', async () => {
     progressStage.textContent = label;
   }
 
+  // Setup course filter buttons
+  setupFilterChips();
+
+  function setupFilterChips() {
+    const chips = [
+      { el: filterChipAll, val: 'ALL' },
+      { el: filterChipShortage, val: 'SHORTAGE' },
+      { el: filterChipSafe, val: 'SAFE' }
+    ];
+
+    chips.forEach(({ el, val }) => {
+      if (!el) return;
+      el.addEventListener('click', () => {
+        chips.forEach(c => c.el?.classList.remove('active'));
+        el.classList.add('active');
+        currentCourseFilter = val;
+        renderFilteredCards();
+      });
+    });
+  }
+
   function renderRecordsList(students) {
+    cachedStudentsList = students || [];
+    
+    // Calculate BITM 85% rule metrics
+    const shortageStudents = cachedStudentsList.filter(s => 
+      (s.subjects || []).some(sub => (sub.attendance_percentage || 0) < 85)
+    );
+    const safeStudents = cachedStudentsList.filter(s => 
+      (s.subjects || []).length > 0 && (s.subjects || []).every(sub => (sub.attendance_percentage || 0) >= 85)
+    );
+
+    if (countChipAll) countChipAll.textContent = cachedStudentsList.length;
+    if (countChipShortage) countChipShortage.textContent = shortageStudents.length;
+    if (countChipSafe) countChipSafe.textContent = safeStudents.length;
+
+    renderFilteredCards();
+  }
+
+  function renderFilteredCards() {
     recordsList.innerHTML = '';
-    if (!students || students.length === 0) {
+    if (!cachedStudentsList || cachedStudentsList.length === 0) {
       recordsList.innerHTML = '<p class="empty-state">No student records available.</p>';
       return;
     }
 
-    students.forEach(st => {
-      const row = document.createElement('div');
-      row.className = 'record-row';
+    const filtered = cachedStudentsList.filter(st => {
+      const hasShortage = (st.subjects || []).some(sub => (sub.attendance_percentage || 0) < 85);
+      if (currentCourseFilter === 'SHORTAGE') return hasShortage;
+      if (currentCourseFilter === 'SAFE') return !hasShortage;
+      return true;
+    });
 
-      const pctClass = st.overallPercentage >= 85 ? 'pct-high' : (st.overallPercentage >= 75 ? 'pct-mid' : 'pct-low');
-      const subCountText = `${st.subjects.length} sub`;
+    if (filtered.length === 0) {
+      recordsList.innerHTML = `<p class="empty-state">No students found for this filter.</p>`;
+      return;
+    }
 
-      row.innerHTML = `
-        <span class="record-usn">${st.usn}</span>
-        <span class="record-name" title="${st.name}">${st.name} <span style="font-size: 9px; opacity: 0.7;">(${subCountText})</span></span>
-        <span class="record-pct ${pctClass}">${st.overallPercentage}%</span>
+    filtered.forEach(st => {
+      const shortageCourses = (st.subjects || []).filter(sub => (sub.attendance_percentage || 0) < 85);
+      const isEligible = shortageCourses.length === 0;
+
+      const card = document.createElement('div');
+      card.className = 'student-card';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'student-card-header';
+      header.innerHTML = `
+        <div class="student-info-left">
+          <span class="student-card-usn font-mono">${st.usn}</span>
+          <span class="student-card-name" title="${st.name}">${st.name}</span>
+        </div>
+        <div class="student-info-right">
+          ${isEligible 
+            ? `<span class="bitm-status-pill safe font-mono">All ≥85%</span>` 
+            : `<span class="bitm-status-pill shortage font-mono">${shortageCourses.length} &lt;85% Shortage</span>`
+          }
+          <span class="student-expand-icon">▼</span>
+        </div>
       `;
 
-      row.style.cursor = 'pointer';
-      row.title = 'Click to highlight student in Contineo tab';
-      row.addEventListener('click', () => {
+      // Course breakdown
+      const breakdown = document.createElement('div');
+      breakdown.className = 'courses-breakdown';
+
+      if (st.subjects && st.subjects.length > 0) {
+        st.subjects.forEach(sub => {
+          const isShort = (sub.attendance_percentage || 0) < 85;
+          const row = document.createElement('div');
+          row.className = 'course-item';
+          row.innerHTML = `
+            <div class="course-code-wrap">
+              <span class="course-code font-mono">${sub.course_code}</span>
+              ${sub.cie && sub.cie !== 'N/A' ? `<span class="course-cie font-mono">CIE: ${sub.cie}</span>` : ''}
+            </div>
+            <div class="course-stat-wrap">
+              <span class="course-pct font-mono ${isShort ? 'shortage' : 'safe'}">${sub.attendance_percentage}%</span>
+              <span class="course-tag ${isShort ? 'shortage' : 'safe'}">${isShort ? 'Shortage (<85%)' : 'Eligible'}</span>
+            </div>
+          `;
+          breakdown.appendChild(row);
+        });
+      } else {
+        breakdown.innerHTML = '<div class="empty-state" style="padding: 4px;">No subject rows extracted.</div>';
+      }
+
+      // Toggle expand & highlight
+      header.addEventListener('click', () => {
+        card.classList.toggle('expanded');
         if (activeTab) {
           chrome.tabs.sendMessage(activeTab.id, { action: 'HIGHLIGHT_STUDENT', usn: st.usn });
         }
       });
 
-      recordsList.appendChild(row);
+      card.appendChild(header);
+      card.appendChild(breakdown);
+      recordsList.appendChild(card);
     });
   }
 

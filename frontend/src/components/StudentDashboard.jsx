@@ -90,7 +90,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70">
           <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400 ring-2 ring-amber-500/20" aria-hidden="true" />
-          Eligible (75-84%)
+          Condonation (75-84%)
         </span>
       );
     }
@@ -232,7 +232,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
             <div className={`h-full ${getBarColor(overall_percentage)}`} style={{ width: `${overall_percentage}%` }} />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-pretty">Target 75% for VTU examination</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-pretty">BITM Minimum: 85% per course</p>
         </div>
 
         {/* Metric 2 */}
@@ -245,7 +245,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
             {critical_subjects_count} {critical_subjects_count === 1 ? 'course' : 'courses'}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-pretty">
-            {critical_subjects_count === 0 ? 'All courses meet 75% minimum' : 'Requires immediate attendance correction'}
+            {critical_subjects_count === 0 ? 'All courses meet BITM 85% minimum' : 'Requires immediate attendance correction'}
           </p>
         </div>
 

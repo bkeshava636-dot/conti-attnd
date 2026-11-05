@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Calculator, CheckCircle2, AlertOctagon, RotateCcw } from 'lucide-react';
 
 export default function ShortageCalculator({ overallPercentage, subjects, darkMode }) {
-  const [targetPercentage, setTargetPercentage] = useState(75);
+  const [targetPercentage, setTargetPercentage] = useState(85);
   const [selectedSubjectCode, setSelectedSubjectCode] = useState('ALL');
   const [simulatedAttendedDelta, setSimulatedAttendedDelta] = useState(0);
   const [simulatedMissedDelta, setSimulatedMissedDelta] = useState(0);
@@ -70,7 +70,7 @@ export default function ShortageCalculator({ overallPercentage, subjects, darkMo
             </button>
           )}
           <span className="text-[11px] font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
-            VTU minimum: 75%
+            BITM minimum: 85%
           </span>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function ShortageCalculator({ overallPercentage, subjects, darkMo
                     : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                {t}% {t === 75 ? '(VTU)' : ''}
+                {t}% {t === 85 ? '(BITM)' : ''}
               </button>
             ))}
           </div>
