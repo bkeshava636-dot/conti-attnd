@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSaveSettings = document.getElementById('btn-save-settings');
   const linkOpenTestFixture = document.getElementById('link-open-test-fixture');
 
+  // Auto-Sync Elements
+  const toggleAutosync = document.getElementById('toggle-autosync');
+  const selectSyncInterval = document.getElementById('select-sync-interval');
+  const autosyncStatusBadge = document.getElementById('autosync-status-badge');
+  const autosyncInfoText = document.getElementById('autosync-info-text');
+
   // State
   let config = {
     backendUrl: 'https://contineo-attendance-tracker.onrender.com',
@@ -58,12 +64,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Load config from chrome.storage
-  const stored = await chrome.storage.local.get(['backendUrl', 'proctorToken', 'lastReport']);
+  const stored = await chrome.storage.local.get([
+    'backendUrl', 
+    'proctorToken', 
+    'lastReport',
+    'autoSyncEnabled',
+    'autoSyncInterval',
+    'lastAutoSyncTimestamp',
+    'lastSyncCount'
+  ]);
   if (stored.backendUrl) config.backendUrl = stored.backendUrl;
   if (stored.proctorToken) config.proctorToken = stored.proctorToken;
 
   inputBackendUrl.value = config.backendUrl;
   inputProctorToken.value = config.proctorToken;
+
+  // Restore Auto-Sync state
+  if (selectSyncInterval && stored.autoSyncInterval) {
+    selectSyncInterval.value = stored.autoSyncInterval.toString();
+  }
+  if (toggleAutosync) {
+    toggleAutosync.checked = !!stored.autoSyncEnabled;
+    updateAutoSyncUI(stored.autoSyncEnabled, stored.lastAutoSyncTimestamp, stored.lastSyncCount);
+  }
 
   // Restore previous report if available
   if (stored.lastReport) {
@@ -100,10 +123,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     await checkBackendStatus();
   });
 
-  linkOpenTestFixture.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
-  });
+  if (linkOpenTestFixture) {
+    linkOpenTestFixture.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
+    });
+  }
+
+  // Auto-Sync handlers
+  if (toggleAutosync) {
+    toggleAutosync.addEventListener('change', handleAutoSyncChange);
+  }
+  if (selectSyncInterval) {
+    selectSyncInterval.addEventListener('change', handleAutoSyncChange);
+  }
+
+  async function handleAutoSyncChange() {
+    const enabled = toggleAutosync.checked;
+    const intervalMinutes = parseInt(selectSyncInterval.value, 10) || 30;
+
+    await chrome.storage.local.set({
+      autoSyncEnabled: enabled,
+      autoSyncInterval: intervalMinutes
+    });
+
+    updateAutoSyncUI(enabled);
+
+    // Message service worker to update alarms
+    chrome.runtime.sendMessage({
+      action: 'SET_AUTO_SYNC',
+      enabled,
+      intervalMinutes
+    });
+  }
+
+  function updateAutoSyncUI(enabled, lastTimestamp, lastCount) {
+    if (!autosyncStatusBadge) return;
+    if (enabled) {
+      autosyncStatusBadge.textContent = 'Active';
+      autosyncStatusBadge.className = 'autosync-status active';
+      if (lastTimestamp && autosyncInfoText) {
+        const timeStr = new Date(lastTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        autosyncInfoText.textContent = `Last auto-sync: ${timeStr} (${lastCount || 0} students).`;
+      } else if (autosyncInfoText) {
+        autosyncInfoText.textContent = `Auto-sync running every ${selectSyncInterval.value} mins in background.`;
+      }
+    } else {
+      autosyncStatusBadge.textContent = 'Off';
+      autosyncStatusBadge.className = 'autosync-status';
+      if (autosyncInfoText) {
+        autosyncInfoText.textContent = 'Periodically syncs open Contineo tabs in background.';
+      }
+    }
+  }
 
   /**
    * Check connection to backend API

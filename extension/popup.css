@@ -520,6 +520,129 @@ body {
   cursor: pointer;
 }
 
+/* Auto-Sync Card */
+.autosync-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.autosync-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.autosync-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.autosync-icon {
+  color: var(--accent-primary);
+}
+
+.autosync-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.autosync-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.autosync-select {
+  flex: 1;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.autosync-select:focus {
+  border-color: var(--accent-primary);
+}
+
+.autosync-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-card-subtle);
+  color: var(--text-dim);
+}
+
+.autosync-status.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+
+.autosync-info {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Toggle Switch Component */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #334155;
+  transition: 0.2s;
+  border-radius: 18px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--accent-primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
 .hidden {
   display: none !important;
 }

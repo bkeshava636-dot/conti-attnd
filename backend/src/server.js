@@ -22,6 +22,32 @@ app.get('/fixture', (req, res) => {
   res.sendFile(path.join(__dirname, '..', '..', 'test-fixtures', 'contineo-sims-fixture.html'));
 });
 
+// Self-Hosted Extension Auto-Update Manifest (Option B)
+app.get('/updates.xml', (req, res) => {
+  const version = '1.1.0';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host');
+  const baseUrl = `${protocol}://${host}`;
+
+  res.set('Content-Type', 'application/xml');
+  res.send(`<?xml version='1.0' encoding='UTF-8'?>
+<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
+  <app appid='contineo-attendance-collector'>
+    <updatecheck codebase='${baseUrl}/download/contineo-attendance-collector.zip' version='${version}' />
+  </app>
+</gupdate>`);
+});
+
+// Download endpoint for the packaged extension update
+app.get('/download/contineo-attendance-collector.zip', (req, res) => {
+  const zipPath = path.join(__dirname, '..', '..', 'contineo-attendance-collector.zip');
+  if (require('fs').existsSync(zipPath)) {
+    res.download(zipPath, 'contineo-attendance-collector.zip');
+  } else {
+    res.status(404).json({ error: 'Package not found' });
+  }
+});
+
 // Optionally serve production frontend build if dist exists
 const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
 if (require('fs').existsSync(frontendDist)) {
