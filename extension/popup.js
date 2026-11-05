@@ -1,0 +1,389 @@
+/**
+ * Contineo Attendance Collector - Popup Controller
+ * Manages one-click extraction, backend publishing, progress, and reports.
+ */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // DOM Elements
+  const statusPortal = document.getElementById('status-portal');
+  const dotPortal = document.getElementById('dot-portal');
+  const statusBackend = document.getElementById('status-backend');
+  const dotBackend = document.getElementById('dot-backend');
+  const countDetected = document.getElementById('count-detected');
+  const detectionDetail = document.getElementById('detection-detail-text');
+  const btnCollect = document.getElementById('btn-collect-publish');
+  const btnActionText = document.getElementById('btn-action-text');
+
+  const progressContainer = document.getElementById('progress-container');
+  const progressStage = document.getElementById('progress-stage-label');
+  const progressPercent = document.getElementById('progress-percent-label');
+  const progressBarFill = document.getElementById('progress-bar-fill');
+
+  const valProcessed = document.getElementById('val-processed');
+  const valSuccessful = document.getElementById('val-successful');
+  const valDuplicates = document.getElementById('val-duplicates');
+  const valFailed = document.getElementById('val-failed');
+
+  const resultNotice = document.getElementById('result-notice');
+  const recordsAccordion = document.getElementById('records-accordion');
+  const btnToggleRecords = document.getElementById('btn-toggle-records');
+  const recordsContent = document.getElementById('records-content');
+  const recordsList = document.getElementById('records-list');
+  const accordionArrow = document.getElementById('accordion-arrow');
+
+  const btnSettingsToggle = document.getElementById('btn-settings-toggle');
+  const btnCloseSettings = document.getElementById('btn-close-settings');
+  const settingsModal = document.getElementById('settings-modal');
+  const inputBackendUrl = document.getElementById('input-backend-url');
+  const inputProctorToken = document.getElementById('input-proctor-token');
+  const btnSaveSettings = document.getElementById('btn-save-settings');
+  const linkOpenTestFixture = document.getElementById('link-open-test-fixture');
+
+  // State
+  let config = {
+    backendUrl: 'http://localhost:5000',
+    proctorToken: 'demo-proctor-secret-key-bitm'
+  };
+  let activeTab = null;
+  let detectedStudents = [];
+  let isProcessing = false;
+
+  // Load config from chrome.storage
+  const stored = await chrome.storage.local.get(['backendUrl', 'proctorToken', 'lastReport']);
+  if (stored.backendUrl) config.backendUrl = stored.backendUrl;
+  if (stored.proctorToken) config.proctorToken = stored.proctorToken;
+
+  inputBackendUrl.value = config.backendUrl;
+  inputProctorToken.value = config.proctorToken;
+
+  // Restore previous report if available
+  if (stored.lastReport) {
+    renderPreviousReport(stored.lastReport);
+  }
+
+  // Check Backend Status
+  await checkBackendStatus();
+
+  // Inspect Active Tab
+  await initTabInspection();
+
+  // Event Listeners
+  btnCollect.addEventListener('click', handleOneClickWorkflow);
+
+  btnToggleRecords.addEventListener('click', () => {
+    const isHidden = recordsContent.classList.toggle('hidden');
+    accordionArrow.textContent = isHidden ? '▼' : '▲';
+  });
+
+  btnSettingsToggle.addEventListener('click', () => {
+    settingsModal.classList.remove('hidden');
+  });
+
+  btnCloseSettings.addEventListener('click', () => {
+    settingsModal.classList.add('hidden');
+  });
+
+  btnSaveSettings.addEventListener('click', async () => {
+    config.backendUrl = inputBackendUrl.value.trim().replace(/\/$/, '');
+    config.proctorToken = inputProctorToken.value.trim();
+    await chrome.storage.local.set(config);
+    settingsModal.classList.add('hidden');
+    await checkBackendStatus();
+  });
+
+  linkOpenTestFixture.addEventListener('click', async (e) => {
+    e.preventDefault();
+    // Open fixture file in local tab or via server
+    const fixtureUrl = chrome.runtime.getURL('../test-fixtures/contineo-sims-fixture.html');
+    // Also support http-served fixture if backend running
+    await chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
+  });
+
+  /**
+   * Check connection to backend API
+   */
+  async function checkBackendStatus() {
+    try {
+      statusBackend.textContent = 'Connecting...';
+      const res = await fetch(`${config.backendUrl}/api/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        statusBackend.textContent = 'Connected';
+        dotBackend.className = 'status-dot active';
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (err) {
+      statusBackend.textContent = 'Offline';
+      dotBackend.className = 'status-dot error';
+    }
+  }
+
+  /**
+   * Inspect current active tab and detect student records
+   */
+  async function initTabInspection() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      activeTab = tab;
+
+      if (!tab || !tab.url) {
+        setPortalState('Not Found', 'warning', 'No active tab detected');
+        return;
+      }
+
+      const isContineo = tab.url.includes('contineo.in') || 
+                          tab.url.includes('contineo-sims-fixture') || 
+                          tab.url.includes('/fixture');
+
+      if (!isContineo) {
+        setPortalState('Standby', 'warning', 'Open BITM Contineo portal or test fixture');
+        btnCollect.disabled = true;
+        btnActionText.textContent = 'OPEN CONTINEO PORTAL';
+        btnCollect.onclick = () => {
+          chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
+        };
+        btnCollect.disabled = false;
+        return;
+      }
+
+      // Ensure content script is injected and responsive
+      await ensureContentScriptInjected(tab.id);
+
+      // Detect students
+      chrome.tabs.sendMessage(tab.id, { action: 'DETECT_STUDENTS' }, (res) => {
+        if (chrome.runtime.lastError || !res || !res.success) {
+          setPortalState('Active (0)', 'warning', 'No student cards detected yet');
+          countDetected.textContent = '0';
+          detectionDetail.textContent = 'Ensure you are on the counselling roster page';
+          btnCollect.disabled = true;
+          return;
+        }
+
+        setPortalState('Connected', 'active', 'SIMS Counselling Page');
+        countDetected.textContent = res.count;
+        detectionDetail.textContent = `${res.count} student profiles ready for extraction`;
+        valProcessed.textContent = `0/${res.count}`;
+
+        btnCollect.disabled = false;
+        btnActionText.textContent = 'COLLECT & PUBLISH ATTENDANCE';
+        btnCollect.onclick = handleOneClickWorkflow;
+      });
+
+    } catch (err) {
+      setPortalState('Error', 'error', err.message);
+    }
+  }
+
+  function setPortalState(text, dotClass, detailText) {
+    statusPortal.textContent = text;
+    dotPortal.className = `status-dot ${dotClass}`;
+    if (detailText) detectionDetail.textContent = detailText;
+  }
+
+  async function ensureContentScriptInjected(tabId) {
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, { action: 'PING' }, (res) => {
+        if (chrome.runtime.lastError || !res || res.status !== 'PONG') {
+          // Inject script dynamically
+          chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['content.js']
+          }, () => {
+            // Short delay for script initialize
+            setTimeout(resolve, 150);
+          });
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * THE ONE-CLICK WORKFLOW
+   * 1. Extract from DOM
+   * 2. Validate
+   * 3. Publish to Backend
+   * 4. Display Report
+   */
+  async function handleOneClickWorkflow() {
+    if (isProcessing || !activeTab) return;
+    isProcessing = true;
+
+    btnCollect.disabled = true;
+    btnActionText.textContent = 'EXTRACTING...';
+    progressContainer.classList.remove('hidden');
+    resultNotice.classList.add('hidden');
+
+    updateProgress(15, 'Reading Contineo DOM...');
+
+    try {
+      // Step 1: Send extraction command to content script
+      const extractionResponse = await new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(activeTab.id, { action: 'EXTRACT_ATTENDANCE' }, (res) => {
+          if (chrome.runtime.lastError) {
+            return reject(new Error(chrome.runtime.lastError.message));
+          }
+          resolve(res);
+        });
+      });
+
+      if (!extractionResponse || !extractionResponse.report || extractionResponse.report.students.length === 0) {
+        throw new Error('No valid student attendance records could be extracted from page.');
+      }
+
+      const { students, warnings, errors: extractionErrors } = extractionResponse.report;
+      detectedStudents = students;
+
+      updateProgress(45, `Extracted ${students.length} students. Validating schema...`);
+
+      // Client-side quick validation summary
+      let totalSubjects = 0;
+      students.forEach(s => totalSubjects += s.subjects.length);
+
+      updateProgress(65, `Publishing ${students.length} records (${totalSubjects} subject entries) to backend...`);
+
+      // Step 2: Push to Backend API
+      const payload = {
+        proctorId: 'proctor-bitm-cse-01',
+        semester: students[0]?.semester || 'SEM03',
+        sourceUrl: activeTab.url,
+        extractedAt: new Date().toISOString(),
+        students: students
+      };
+
+      const res = await fetch(`${config.backendUrl}/api/attendance/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.proctorToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Backend responded with HTTP ${res.status}`);
+      }
+
+      const publishResult = await res.json();
+      updateProgress(100, 'Publishing completed successfully!');
+
+      // Step 3: Update Metrics
+      valProcessed.textContent = `${publishResult.totalProcessed}/${publishResult.totalProcessed}`;
+      valSuccessful.textContent = publishResult.successfulRecords;
+      valDuplicates.textContent = publishResult.duplicatesHandled || 0;
+      valFailed.textContent = publishResult.failedRecords || 0;
+
+      // Show Result Notice
+      resultNotice.className = 'result-notice success';
+      resultNotice.innerHTML = `
+        <strong>Collection Completed!</strong><br>
+        Students Processed: <strong>${publishResult.successfulRecords}/${publishResult.totalProcessed}</strong><br>
+        Records Published: <strong>${publishResult.successfulRecords}</strong><br>
+        <span style="font-size: 11px; opacity: 0.9;">Last Updated: ${new Date().toLocaleTimeString()}</span>
+      `;
+      resultNotice.classList.remove('hidden');
+
+      // Render records list in accordion
+      renderRecordsList(students);
+      recordsContent.classList.remove('hidden');
+      accordionArrow.textContent = '▲';
+
+      // Persist last report
+      await chrome.storage.local.set({
+        lastReport: {
+          timestamp: new Date().toISOString(),
+          processed: publishResult.totalProcessed,
+          successful: publishResult.successfulRecords,
+          duplicates: publishResult.duplicatesHandled,
+          failed: publishResult.failedRecords,
+          students: students
+        }
+      });
+
+      btnActionText.textContent = 'SYNC COMPLETED ✓';
+      setTimeout(() => {
+        btnCollect.disabled = false;
+        btnActionText.textContent = 'RE-COLLECT & PUBLISH';
+        isProcessing = false;
+      }, 2500);
+
+    } catch (err) {
+      console.error('Workflow error:', err);
+      updateProgress(100, 'Workflow stopped with errors');
+      resultNotice.className = 'result-notice error';
+      resultNotice.innerHTML = `
+        <strong>Collection Incomplete</strong><br>
+        ${err.message}<br>
+        <span style="font-size: 10px;">Check backend connection or page structure.</span>
+      `;
+      resultNotice.classList.remove('hidden');
+
+      btnCollect.disabled = false;
+      btnActionText.textContent = 'RETRY COLLECTION';
+      isProcessing = false;
+    }
+  }
+
+  function updateProgress(percent, label) {
+    progressBarFill.style.width = `${percent}%`;
+    progressPercent.textContent = `${percent}%`;
+    progressStage.textContent = label;
+  }
+
+  function renderRecordsList(students) {
+    recordsList.innerHTML = '';
+    if (!students || students.length === 0) {
+      recordsList.innerHTML = '<p class="empty-state">No student records available.</p>';
+      return;
+    }
+
+    students.forEach(st => {
+      const row = document.createElement('div');
+      row.className = 'record-row';
+
+      const pctClass = st.overallPercentage >= 85 ? 'pct-high' : (st.overallPercentage >= 75 ? 'pct-mid' : 'pct-low');
+
+      row.innerHTML = `
+        <span class="record-usn">${st.usn}</span>
+        <span class="record-name" title="${st.name}">${st.name}</span>
+        <span class="record-pct ${pctClass}">${st.overallPercentage}%</span>
+      `;
+
+      // Allow clicking on student to scroll to them in Contineo tab
+      row.style.cursor = 'pointer';
+      row.title = 'Click to highlight student in Contineo tab';
+      row.addEventListener('click', () => {
+        if (activeTab) {
+          chrome.tabs.sendMessage(activeTab.id, { action: 'HIGHLIGHT_STUDENT', usn: st.usn });
+        }
+      });
+
+      recordsList.appendChild(row);
+    });
+  }
+
+  function renderPreviousReport(report) {
+    valProcessed.textContent = `${report.processed}/${report.processed}`;
+    valSuccessful.textContent = report.successful;
+    valDuplicates.textContent = report.duplicates || 0;
+    valFailed.textContent = report.failed || 0;
+
+    resultNotice.className = 'result-notice success';
+    const dateStr = new Date(report.timestamp).toLocaleTimeString();
+    resultNotice.innerHTML = `
+      <strong>Previous Sync Active</strong><br>
+      Published: <strong>${report.successful}</strong> students (${dateStr})
+    `;
+    resultNotice.classList.remove('hidden');
+
+    if (report.students && report.students.length > 0) {
+      renderRecordsList(report.students);
+    }
+  }
+});

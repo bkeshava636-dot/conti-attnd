@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contineo - Bringing Happiness | SIMS Student Counselling</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    /* Top Bar & Header matching Contineo */
+    .top-header {
+      background: #ffffff;
+      border-bottom: 2px solid #0284c7;
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .branding {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo-badge {
+      background: #0284c7;
+      color: white;
+      font-weight: 800;
+      font-size: 18px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .college-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .nav-item {
+      font-size: 13px;
+      font-weight: 700;
+      color: #475569;
+      text-decoration: none;
+      text-transform: uppercase;
+      padding: 6px 10px;
+    }
+    .nav-item.active {
+      color: #0284c7;
+      border-bottom: 2px solid #0284c7;
+    }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #0284c7;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* Page Container */
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+    .proctor-banner {
+      background: #e0f2fe;
+      border-left: 4px solid #0284c7;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .banner-text h2 {
+      font-size: 16px;
+      color: #0369a1;
+      font-weight: 700;
+    }
+    .banner-text p {
+      font-size: 13px;
+      color: #0c4a6e;
+    }
+
+    /* Student Section Container */
+    .student-section {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 28px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      overflow: hidden;
+    }
+    .student-header {
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .student-profile {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .student-photo {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #334155;
+      font-size: 14px;
+    }
+    .student-details h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-transform: uppercase;
+    }
+    .student-meta {
+      font-size: 13px;
+      color: #475569;
+      display: flex;
+      gap: 14px;
+    }
+    .student-meta span strong {
+      color: #1e293b;
+    }
+
+    .section-body {
+      padding: 18px 20px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 14px;
+      background-color: #991b1b;
+      border-radius: 1px;
+    }
+
+    /* Attendance Data Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 13px;
+    }
+    .data-table th {
+      background-color: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 14px;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 2px solid #cbd5e1;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    .data-table td {
+      padding: 8px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #1e293b;
+    }
+    .data-table tr:nth-child(even) td {
+      background-color: #fcfdfe;
+    }
+    .data-table tr:hover td {
+      background-color: #f0f9ff;
+    }
+    .attendance-val {
+      font-weight: 600;
+    }
+
+    /* Counseling Table */
+    .counseling-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .counseling-table th {
+      background: #f8fafc;
+      text-align: left;
+      padding: 6px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #475569;
+      font-size: 11px;
+    }
+    .counseling-table td {
+      padding: 6px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: #64748b;
+      font-size: 12px;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body data-page="contineo-counselling">
+
+  <!-- Top Contineo Header -->
+  <header class="top-header">
+    <div class="branding">
+      <div class="logo-badge">BITM</div>
+      <div class="college-title">Ballari Institute of Technology & Management, Ballari</div>
+    </div>
+    <nav class="nav-links">
+      <a href="#" class="nav-item">HOME</a>
+      <a href="#" class="nav-item">STUDENT</a>
+      <a href="#" class="nav-item active">COUNSELLING</a>
+      <a href="#" class="nav-item">USER MANUAL</a>
+      <a href="#" class="nav-item">LOGOUT</a>
+    </nav>
+    <div class="user-profile">
+      <div class="avatar-circle">PR</div>
+      <span>Dr. B. K. Sharma (Proctor)</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="proctor-banner">
+      <div class="banner-text">
+        <h2>Proctor Student Roster (Academic Year 2026-27 | Semester 3 - CSE)</h2>
+        <p>Assigned Students: 22 | Last System Sync: 2026-10-24 15:23:49 | Contineo SIMS Portal</p>
+      </div>
+      <div>
+        <span style="font-size: 12px; background: #0284c7; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 600;">ACTIVE BATCH</span>
+      </div>
+    </div>
+
+    <!-- Container holding all 22 students -->
+    <div id="student-roster" class="student-roster">
+
+      <!-- Student 1 -->
+      <div class="student-section" id="student-3BR23CS001" data-usn="3BR23CS001">
+        <div class="student-header">
+          <div class="student-profile">
+            <div class="student-photo">AV</div>
+            <div class="student-details">
+              <h3 class="student-name">A VEDHA SHREE</h3>
+              <div class="student-meta">
+                <span class="student-usn">USN: <strong>3BR23CS001</strong></span>
+                <span class="student-sem">Semester: <strong>SEM03</strong></span>
+                <span>Branch: <strong>Computer Science & Engg</strong></span>
+              </div>
+            </div>
+          </div>
+          <div><span style="color: #059669; font-weight: 600; font-size: 12px;">STATUS: ACTIVE</span></div>
+        </div>
+        <div class="section-body">
+          <div class="section-title">Counselling Details : 2026-10-24 15:23:49</div>
+          <div class="section-title">Current Sem Data:</div>
+          <table class="data-table" data-type="attendance-table">
+            <thead>
+              <tr>
+                <th>COURSE CODE</th>
+                <th>CIE</th>
+                <th>ATTENDANCE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1BMCS301</td><td>IA1 - 50/50</td><td class="attendance-val">91%</td></tr>
+              <tr><td>1BCS302</td><td>IA1 - 48/50</td><td class="attendance-val">95%</td></tr>
+              <tr><td>1BCS303</td><td>IA1 - 46/50</td><td class="attendance-val">90%</td></tr>
+              <tr><td>1BCS304</td><td>IA1 - 42/50</td><td class="attendance-val">81%</td></tr>
+              <tr><td>1BCS305</td><td>IA1 - 45/50</td><td class="attendance-val">90%</td></tr>
+              <tr><td>1BCS306L</td><td>IA1 - 50/50</td><td class="attendance-val">100%</td></tr>
+              <tr><td>1BCS307L</td><td>IA1 - 44/50</td><td class="attendance-val">80%</td></tr>
+              <tr><td>1BCS308L</td><td>IA1 - 50/50</td><td class="attendance-val">100%</td></tr>
+              <tr><td>1BCSCP310</td><td>IA1 - 35/50</td><td class="attendance-val">60%</td></tr>
+              <tr><td>1BPSW309</td><td>IA1 - 40/50</td><td class="attendance-val">78%</td></tr>
+            </tbody>
+          </table>
+          <div class="section-title">Counseling Data:</div>
+          <table class="counseling-table">
+            <thead>
+              <tr><th>SL.NO</th><th>COMMENTS</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Counselled on 18/10/25 Student is regular to the classes.</td></tr>
+              <tr><td>2</td><td>Counselled after 1st internals. He secured good marks in all the subjects. 100% attendance in most of the subjects.</td></tr>
+              <tr><td>3</td><td>Vedha is regular to classes.. no issues..</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Student 2 -->
+      <div class="student-section" id="student-3BR23CS002" data-usn="3BR23CS002">
+        <div class="student-header">
+          <div class="student-profile">
+            <div class="student-photo">MM</div>
+            <div class="student-details">
+              <h3 class="student-name">MANIDEEP M</h3>
+              <div class="student-meta">
+                <span class="student-usn">USN: <strong>3BR23CS002</strong></span>
+                <span class="student-sem">Semester: <strong>SEM03</strong></span>
+                <span>Branch: <strong>Computer Science & Engg</strong></span>
+              </div>
+            </div>
+          </div>
+          <div><span style="color: #059669; font-weight: 600; font-size: 12px;">STATUS: ACTIVE</span></div>
+        </div>
+        <div class="section-body">
+          <div class="section-title">Counselling Details : 2026-10-24 15:23:49</div>
+          <div class="section-title">Current Sem Data:</div>
+          <table class="data-table" data-type="attendance-table">
+            <thead>
+              <tr><th>COURSE CODE</th><th>CIE</th><th>ATTENDANCE</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1BMCS301</td><td>IA1 - 50/50</td><td class="attendance-val">95%</td></tr>
+              <tr><td>1BCS302</td><td>IA1 - 42/50</td><td class="attendance-val">85%</td></tr>
+              <tr><td>1BCS303</td><td>IA1 - 44/50</td><td class="attendance-val">88%</td></tr>
+              <tr><td>1BCS304</td><td>IA1 - 43/50</td><td class="attendance-val">87%</td></tr>
+              <tr><td>1BCS305</td><td>IA1 - 41/50</td><td class="attendance-val">85%</td></tr>
+              <tr><td>1BCS306L</td><td>IA1 - 50/50</td><td class="attendance-val">100%</td></tr>
+              <tr><td>1BCS307L</td><td>IA1 - 46/50</td><td class="attendance-val">86%</td></tr>
+              <tr><td>1BCS308L</td><td>IA1 - 50/50</td><td class="attendance-val">100%</td></tr>
+              <tr><td>1BCSCP310</td><td>IA1 - 40/50</td><td class="attendance-val">80%</td></tr>
+              <tr><td>1BPSW309</td><td>IA1 - 42/50</td><td class="attendance-val">81%</td></tr>
+            </tbody>
+          </table>
+          <div class="section-title">Counseling Data:</div>
+          <table class="counseling-table">
+            <thead><tr><th>SL.NO</th><th>COMMENTS</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Student was absent for 3 days due to health issues. Regular now.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Helper script generating remaining 20 students with realistic BITM student data -->
+      <script>
+        const studentTemplates = [
+          { usn: "3BR23CS003", name: "ADITYA KULKARNI", p: [88, 92, 85, 79, 90, 100, 85, 100, 75, 82] },
+          { usn: "3BR23CS004", name: "ANANYA HEGDE", p: [94, 96, 91, 88, 92, 100, 90, 100, 85, 88] },
+          { usn: "3BR23CS005", name: "BHARATH KUMAR R", p: [72, 68, 70, 74, 69, 85, 70, 90, 60, 71] },
+          { usn: "3BR23CS006", name: "CHETHAN S PATIL", p: [85, 89, 82, 80, 84, 95, 82, 95, 78, 80] },
+          { usn: "3BR23CS007", name: "DEEPIKA SHETTY", p: [92, 90, 88, 85, 91, 100, 88, 100, 80, 86] },
+          { usn: "3BR23CS008", name: "GAGAN GOWDA", p: [78, 75, 76, 73, 77, 88, 76, 92, 70, 74] },
+          { usn: "3BR23CS009", name: "HARSHITHA V", p: [96, 95, 94, 90, 95, 100, 94, 100, 90, 92] },
+          { usn: "3BR23CS010", name: "KIRAN KUMAR N", p: [82, 80, 84, 78, 81, 90, 80, 95, 75, 79] },
+          { usn: "3BR23CS011", name: "LAVANYA REDDY", p: [90, 88, 87, 85, 89, 100, 85, 100, 82, 86] },
+          { usn: "3BR23CS012", name: "MOHAMMED REHAN", p: [68, 72, 70, 66, 71, 80, 72, 85, 65, 70] },
+          { usn: "3BR23CS013", name: "NANDINI S", p: [91, 93, 89, 86, 90, 100, 89, 100, 84, 87] },
+          { usn: "3BR23CS014", name: "NIKHIL B", p: [84, 82, 85, 80, 83, 92, 81, 95, 76, 80] },
+          { usn: "3BR23CS015", name: "PAVITHRA M", p: [89, 91, 88, 85, 90, 98, 87, 100, 82, 85] },
+          { usn: "3BR23CS016", name: "PRAVEEN KUMAR G", p: [74, 71, 75, 70, 73, 85, 72, 90, 68, 72] },
+          { usn: "3BR23CS017", name: "PRIYANKA JOSHI", p: [93, 95, 92, 89, 94, 100, 91, 100, 88, 90] },
+          { usn: "3BR23CS018", name: "RAHUL SHARMA", p: [80, 84, 81, 77, 82, 90, 80, 95, 74, 78] },
+          { usn: "3BR23CS019", name: "ROHIT VERMA", p: [86, 88, 85, 82, 87, 95, 84, 98, 80, 83] },
+          { usn: "3BR23CS020", name: "SAHANA R", p: [95, 94, 92, 91, 93, 100, 92, 100, 86, 90] },
+          { usn: "3BR23CS021", name: "SANJAY K", p: [79, 77, 80, 76, 78, 88, 78, 92, 72, 76] },
+          { usn: "3BR23CS022", name: "VARUN TEJA", p: [87, 89, 86, 84, 88, 96, 85, 98, 82, 85] }
+        ];
+
+        const courses = [
+          "1BMCS301", "1BCS302", "1BCS303", "1BCS304", "1BCS305",
+          "1BCS306L", "1BCS307L", "1BCS308L", "1BCSCP310", "1BPSW309"
+        ];
+
+        const roster = document.getElementById('student-roster');
+        studentTemplates.forEach((st, idx) => {
+          const initials = st.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+          const rows = courses.map((c, i) => `
+            <tr>
+              <td>${c}</td>
+              <td>IA1 - ${Math.floor(40 + Math.random() * 11)}/50</td>
+              <td class="attendance-val">${st.p[i]}%</td>
+            </tr>
+          `).join('');
+
+          const card = document.createElement('div');
+          card.className = 'student-section';
+          card.id = `student-${st.usn}`;
+          card.setAttribute('data-usn', st.usn);
+          card.innerHTML = `
+            <div class="student-header">
+              <div class="student-profile">
+                <div class="student-photo">${initials}</div>
+                <div class="student-details">
+                  <h3 class="student-name">${st.name}</h3>
+                  <div class="student-meta">
+                    <span class="student-usn">USN: <strong>${st.usn}</strong></span>
+                    <span class="student-sem">Semester: <strong>SEM03</strong></span>
+                    <span>Branch: <strong>Computer Science & Engg</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div><span style="color: #059669; font-weight: 600; font-size: 12px;">STATUS: ACTIVE</span></div>
+            </div>
+            <div class="section-body">
+              <div class="section-title">Counselling Details : 2026-10-24 15:23:49</div>
+              <div class="section-title">Current Sem Data:</div>
+              <table class="data-table" data-type="attendance-table">
+                <thead>
+                  <tr><th>COURSE CODE</th><th>CIE</th><th>ATTENDANCE</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+              <div class="section-title">Counseling Data:</div>
+              <table class="counseling-table">
+                <thead><tr><th>SL.NO</th><th>COMMENTS</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>Mid-term counselling completed. Progress satisfactory.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          `;
+          roster.appendChild(card);
+        });
+      </script>
+
+    </div>
+  </div>
+
+  <footer class="footer">
+    Copyright © Powered By Contineo • Ballari Institute of Technology & Management SIMS
+  </footer>
+</body>
+</html>

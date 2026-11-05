@@ -1,0 +1,19 @@
+{
+  "name": "contineo-attendance-backend",
+  "version": "1.0.0",
+  "description": "Backend API and database services for Contineo Attendance Tracker",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.0"
+  }
+}
