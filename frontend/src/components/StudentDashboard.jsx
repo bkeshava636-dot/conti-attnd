@@ -22,30 +22,15 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
   const [sortBy, setSortBy] = useState('LOWEST'); // 'LOWEST' | 'HIGHEST' | 'CODE' | 'NAME'
   const [copiedUSN, setCopiedUSN] = useState(false);
 
-  if (!data || !data.student) {
-    return (
-      <div className="text-center py-20 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
-        <p className="text-slate-500 dark:text-slate-400 text-sm">No verified attendance record loaded.</p>
-      </div>
-    );
-  }
+  const student = data?.student;
+  const overall_percentage = data?.overall_percentage || 0;
+  const overall_status = data?.overall_status || 'GOOD';
+  const critical_subjects_count = data?.critical_subjects_count || 0;
+  const subjects = data?.subjects || [];
 
-  const { student, overall_percentage, overall_status, critical_subjects_count, subjects } = data;
-
-  const handleCopyUSN = () => {
-    navigator.clipboard.writeText(student.usn);
-    setCopiedUSN(true);
-    onNotify?.(`USN ${student.usn} copied to clipboard`);
-    setTimeout(() => setCopiedUSN(false), 2000);
-  };
-
-  // Student Initials
-  const initials = student.name
-    ? student.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('')
-    : 'ST';
-
-  // Filter & Sort courses
+  // Filter & Sort courses (unconditional hook)
   const processedSubjects = useMemo(() => {
+    if (!subjects.length) return [];
     return subjects
       .filter(sub => {
         // Status filter
@@ -71,6 +56,25 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
         return 0;
       });
   }, [subjects, filter, searchQuery, sortBy]);
+
+  if (!data || !student) {
+    return (
+      <div className="text-center py-20 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
+        <p className="text-slate-500 dark:text-slate-400 text-sm">No verified attendance record loaded.</p>
+      </div>
+    );
+  }
+
+  const handleCopyUSN = () => {
+    navigator.clipboard.writeText(student.usn);
+    setCopiedUSN(true);
+    onNotify?.(`USN ${student.usn} copied to clipboard`);
+    setTimeout(() => setCopiedUSN(false), 2000);
+  };
+
+  const initials = student.name
+    ? student.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('')
+    : 'ST';
 
   // Status Badge with Status Dot (High-Contrast in Light & Dark modes)
   const getStatusBadge = (pct) => {

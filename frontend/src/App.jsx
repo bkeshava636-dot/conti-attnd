@@ -11,7 +11,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('student'); // 'student' | 'proctor'
   const [currentUSN, setCurrentUSN] = useState('3BR23CS001');
   const [studentData, setStudentData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loginError, setLoginError] = useState(null);
   const [showStudentLoginModal, setShowStudentLoginModal] = useState(false);
