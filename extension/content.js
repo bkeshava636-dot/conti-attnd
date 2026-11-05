@@ -6,9 +6,24 @@
 (function () {
   'use strict';
 
-  // Regular expressions for data validation
-  const USN_REGEX = /\b([1-4][A-Z0-9]{2}\d{2}[A-Z0-9]{2,3}\d{2,3})\b/i;
+  // Regular expressions for strict data validation
+  // VTU USN standard format: 1 digit (1-4), 2 uppercase letters, 2 digits (year), 2-3 letters (branch), 2-3 digits
+  const USN_REGEX = /\b([1-4][A-Z]{2}\d{2}[A-Z]{2,3}\d{2,3})\b/i;
   const COURSE_CODE_REGEX = /\b([0-9][A-Z]{2,4}[0-9]{3}[A-Z0-9]*)\b/i;
+
+  // Known UI keywords to exclude when searching for student names
+  const EXCLUDED_NAME_KEYWORDS = [
+    'BALLARI', 'INSTITUTE', 'TECHNOLOGY', 'MANAGEMENT',
+    'HOME', 'STUDENT', 'COUNSELLING', 'USER', 'MANUAL', 'LOGOUT',
+    'COURSE', 'CODE', 'CIE', 'ATTENDANCE', 'SL.NO', 'COMMENTS',
+    'DETAILS', 'CURRENT', 'SEM', 'DATA', 'STATUS', 'ACTIVE',
+    'COPYRIGHT', 'POWERED', 'CONTINEO', 'TERMS', 'SERVICE', 'PRIVACY'
+  ];
+
+  function getNodeText(node) {
+    if (!node) return '';
+    return (node.innerText !== undefined ? node.innerText : node.textContent) || '';
+  }
 
   /**
    * Main extraction engine
@@ -16,9 +31,12 @@
   function extractAllStudents(doc = document) {
     const report = {
       timestamp: new Date().toISOString(),
-      pageTitle: doc.title,
+      pageTitle: doc.title || '',
       url: typeof window !== 'undefined' ? window.location?.href || '' : (doc.defaultView?.location?.href || ''),
       totalDetected: 0,
+      successfulRecords: 0,
+      failedRecords: 0,
+      duplicatesHandled: 0,
       students: [],
       errors: [],
       warnings: []
@@ -35,7 +53,7 @@
         if (studentSections.length > 0) {
           studentSections.forEach((section, index) => {
             const student = extractFromStudentContainer(section, index + 1);
-            if (student) {
+            if (student && student.usn) {
               report.students.push(student);
             }
           });
@@ -43,28 +61,29 @@
           report.warnings.push('No attendance tables or student containers found on page.');
         }
       } else {
-        // Primary strategy: Process each attendance table and map to its student context
+        // Primary strategy: Process each attendance table with strictly bounded DOM scope
         attendanceTables.forEach((table, index) => {
           try {
-            const studentData = parseStudentFromTableContext(table, doc, index + 1);
-            if (studentData && studentData.usn) {
+            const previousTable = index > 0 ? attendanceTables[index - 1] : null;
+            const studentData = parseStudentFromTableContext(table, previousTable, doc, index + 1);
+            if (studentData && studentData.usn && studentData.subjects.length > 0) {
               report.students.push(studentData);
             } else {
               report.errors.push({
                 index: index + 1,
-                error: 'Could not associate attendance table with a valid student USN'
+                error: studentData?.error || 'Could not associate attendance table with a valid student USN or subjects'
               });
             }
           } catch (err) {
             report.errors.push({
               index: index + 1,
-              error: `Table parse error: ${err.message}`
+              error: `Table parse error on table ${index + 1}: ${err.message}`
             });
           }
         });
       }
 
-      // Deduplicate students by USN if needed
+      // Deduplicate students by USN
       const seenUSNs = new Set();
       const uniqueStudents = [];
       const duplicateUSNs = [];
@@ -80,24 +99,23 @@
 
       if (duplicateUSNs.length > 0) {
         report.warnings.push(`Deduplicated ${duplicateUSNs.length} repeated student record(s): ${duplicateUSNs.join(', ')}`);
+        report.duplicatesHandled = duplicateUSNs.length;
       }
 
       report.students = uniqueStudents;
       report.totalDetected = uniqueStudents.length;
+      report.successfulRecords = uniqueStudents.length;
+      report.failedRecords = report.errors.length;
 
     } catch (globalErr) {
       report.errors.push({
         index: 0,
         error: `Extraction aborted: ${globalErr.message}`
       });
+      report.failedRecords++;
     }
 
     return report;
-  }
-
-  function getNodeText(node) {
-    if (!node) return '';
-    return (node.innerText !== undefined ? node.innerText : node.textContent) || '';
   }
 
   /**
@@ -112,29 +130,22 @@
   }
 
   /**
-   * Parse a student section given its attendance table
+   * Parse a student section given its attendance table and previous table boundary
    */
-  function parseStudentFromTableContext(table, doc, index) {
-    // 1. First search enclosing container
-    let container = table.closest('.student-section, [data-usn], .panel, .card, .box, fieldset');
-    
-    // 2. Extract USN, Name, Semester
+  function parseStudentFromTableContext(table, previousTable, doc, index) {
     let usn = '';
     let name = '';
     let semester = 'SEM03';
 
+    // Strategy 1: Check if inside an enclosing container (e.g. .student-section, [data-usn])
+    const container = table.closest('.student-section, [data-usn], .panel, .card, .box, fieldset');
     if (container) {
       usn = container.getAttribute('data-usn') || '';
       const containerText = getNodeText(container);
       
       if (!usn) {
-        const match = containerText.match(/USN\s*[:\-]?\s*([1-4][A-Z0-9]{2}\d{2}[A-Z0-9]{2,3}\d{2,3})/i);
-        if (match) {
-          usn = match[1].toUpperCase();
-        } else {
-          const generalMatch = containerText.match(USN_REGEX);
-          if (generalMatch) usn = generalMatch[1].toUpperCase();
-        }
+        const match = containerText.match(/USN\s*[:\-]?\s*([1-4][A-Z]{2}\d{2}[A-Z]{2,3}\d{2,3})/i) || containerText.match(USN_REGEX);
+        if (match) usn = match[1].toUpperCase();
       }
 
       const nameEl = container.querySelector('.student-name, h3, h4, .name');
@@ -143,32 +154,71 @@
       }
 
       const semMatch = containerText.match(/Semester\s*[:\-]?\s*(SEM\d+|\d+(?:st|nd|rd|th)?\s*Sem)/i);
+      if (semMatch) semester = normalizeSemester(semMatch[1]);
+    }
+
+    // Strategy 2: Bounded DOM Slice between previousTable and current table
+    // Guarantees we NEVER mix students even on completely flat pages!
+    if (!usn || !name) {
+      const sliceNodes = getNodesBetween(previousTable, table, doc);
+      let sliceText = '';
+      const candidateNames = [];
+
+      sliceNodes.forEach(node => {
+        const text = getNodeText(node).trim();
+        if (text) {
+          sliceText += ' ' + text;
+          
+          // Check for candidate student names (heading elements, bold text, or spans near images)
+          const tag = node.tagName?.toLowerCase();
+          if (['h2', 'h3', 'h4', 'strong', 'b', 'span'].includes(tag) || (node.classList && (node.classList.contains('name') || node.classList.contains('student-name')))) {
+            const clean = text.replace(/USN.*$/i, '').trim();
+            if (clean.length >= 3 && clean.length <= 40 && !isExcludedKeyword(clean)) {
+              candidateNames.push(clean);
+            }
+          }
+        }
+      });
+
+      if (!usn) {
+        const usnMatch = sliceText.match(/USN\s*[:\-]?\s*([1-4][A-Z]{2}\d{2}[A-Z]{2,3}\d{2,3})/i) || sliceText.match(USN_REGEX);
+        if (usnMatch) {
+          usn = usnMatch[1].toUpperCase();
+        }
+      }
+
+      if (!name && candidateNames.length > 0) {
+        name = candidateNames[0];
+      }
+
+      const semMatch = sliceText.match(/(SEM\d+|\d+(?:st|nd|rd|th)?\s*Sem)/i);
       if (semMatch) {
-        semester = semMatch[1].toUpperCase();
+        semester = normalizeSemester(semMatch[1]);
       }
     }
 
-    // 3. If container search didn't yield USN, walk backwards in DOM from table
+    // Validation checks
     if (!usn) {
-      const precedingText = getPrecedingText(table, 1500);
-      const usnMatch = precedingText.match(/USN\s*[:\-]?\s*([1-4][A-Z0-9]{2}\d{2}[A-Z0-9]{2,3}\d{2,3})/i) || precedingText.match(USN_REGEX);
-      if (usnMatch) {
-        usn = usnMatch[1].toUpperCase();
-      }
+      return {
+        error: `Could not identify USN for student section ${index}`
+      };
     }
 
-    // Fallback name if missing
-    if (!name && usn) {
+    if (!name) {
       name = `Student (${usn})`;
     }
 
-    // 4. Parse rows of the table
+    // Parse rows of the table
     const subjects = parseAttendanceRows(table);
 
+    if (subjects.length === 0) {
+      return {
+        error: `No subject attendance rows found for student ${usn}`
+      };
+    }
+
     // Compute student aggregate
-    const overallPercentage = subjects.length > 0
-      ? Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10
-      : 0;
+    const overallPercentage = Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10;
 
     return {
       usn,
@@ -178,6 +228,52 @@
       overallPercentage,
       subjects
     };
+  }
+
+  /**
+   * Collect all DOM element nodes strictly occurring after startNode and before endNode
+   */
+  function getNodesBetween(startNode, endNode, doc) {
+    const nodes = [];
+    let collecting = !startNode; // If no startNode, collect from beginning
+
+    const iterator = doc.createNodeIterator(
+      doc.body || doc.documentElement,
+      doc.defaultView?.NodeFilter?.SHOW_ELEMENT || 1
+    );
+
+    let curr;
+    while ((curr = iterator.nextNode())) {
+      if (!collecting) {
+        if (curr === startNode) {
+          collecting = true;
+        }
+        continue;
+      }
+
+      if (curr === endNode) {
+        break; // Reached end boundary
+      }
+
+      // Collect elements in this bounded range
+      nodes.push(curr);
+    }
+
+    return nodes;
+  }
+
+  function isExcludedKeyword(text) {
+    const upper = text.toUpperCase();
+    return EXCLUDED_NAME_KEYWORDS.some(kw => upper.includes(kw));
+  }
+
+  function normalizeSemester(semStr) {
+    const numMatch = semStr.match(/(\d+)/);
+    if (numMatch) {
+      const num = parseInt(numMatch[1], 10);
+      return `SEM0${num}`;
+    }
+    return semStr.toUpperCase().replace(/\s+/g, '');
   }
 
   /**
@@ -229,7 +325,6 @@
       const numMatch = attRaw.match(/(\d+(?:\.\d+)?)/);
       if (numMatch) {
         percentage = parseFloat(numMatch[1]);
-        // Validate range 0 - 100
         if (percentage >= 0 && percentage <= 100) {
           percentage = Math.round(percentage * 10) / 10;
         } else {
@@ -256,7 +351,7 @@
     let usn = container.getAttribute('data-usn') || '';
     const text = getNodeText(container);
     if (!usn) {
-      const match = text.match(/USN\s*[:\-]?\s*([1-4][A-Z0-9]{2}\d{2}[A-Z0-9]{2,3}\d{2,3})/i) || text.match(USN_REGEX);
+      const match = text.match(/USN\s*[:\-]?\s*([1-4][A-Z]{2}\d{2}[A-Z]{2,3}\d{2,3})/i) || text.match(USN_REGEX);
       if (match) usn = match[1].toUpperCase();
     }
 
@@ -266,15 +361,15 @@
     const name = nameEl ? getNodeText(nameEl).trim() : `Student (${usn})`;
 
     let semester = 'SEM03';
-    const semMatch = text.match(/Semester\s*[:\-]?\s*(SEM\d+|\d+(?:st|nd|rd|th)?\s*Sem)/i);
-    if (semMatch) semester = semMatch[1].toUpperCase();
+    const semMatch = text.match(/(SEM\d+|\d+(?:st|nd|rd|th)?\s*Sem)/i);
+    if (semMatch) semester = normalizeSemester(semMatch[1]);
 
     const table = container.querySelector('table');
     const subjects = table ? parseAttendanceRows(table) : [];
 
-    const overallPercentage = subjects.length > 0
-      ? Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10
-      : 0;
+    if (subjects.length === 0) return null;
+
+    const overallPercentage = Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10;
 
     return {
       usn,
@@ -284,19 +379,6 @@
       overallPercentage,
       subjects
     };
-  }
-
-  /**
-   * Walk backwards through text content
-   */
-  function getPrecedingText(node, maxChars = 1000) {
-    let text = '';
-    let curr = node.previousSibling || node.parentElement;
-    while (curr && text.length < maxChars) {
-      text = getNodeText(curr) + ' ' + text;
-      curr = curr.previousSibling || curr.parentElement;
-    }
-    return text;
   }
 
   // Chrome Extension Messaging Interface
@@ -329,7 +411,9 @@
 
       if (message.action === 'HIGHLIGHT_STUDENT') {
         const usn = message.usn;
-        const target = document.querySelector(`[data-usn="${usn}"], #student-${usn}`);
+        const target = document.querySelector(`[data-usn="${usn}"], #student-${usn}`) ||
+          Array.from(document.querySelectorAll('*')).find(el => getNodeText(el).includes(usn));
+        
         if (target) {
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
           target.style.outline = '3px solid #10b981';

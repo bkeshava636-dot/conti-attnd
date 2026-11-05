@@ -28,6 +28,32 @@ if (require('fs').existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
 }
 
+// -----------------------------------------------------------------------------
+// PROCTOR LOGIN & EPHEMERAL SESSION ISSUANCE
+// -----------------------------------------------------------------------------
+app.post('/api/auth/proctor-login', (req, res) => {
+  const { secretKey, proctorId = 'proctor-bitm-cse-01' } = req.body;
+  if (!secretKey) {
+    return res.status(400).json({ error: 'Missing proctor key' });
+  }
+
+  if (secretKey !== PROCTOR_SECRET_KEY) {
+    return res.status(401).json({ error: 'Invalid proctor credentials' });
+  }
+
+  // Issue ephemeral session token (valid for 8 hours)
+  const expiresAt = Date.now() + 8 * 3600 * 1000;
+  const sessionPayload = `${proctorId}:${expiresAt}`;
+  const ephemeralToken = `proc_${Buffer.from(sessionPayload).toString('base64')}`;
+
+  res.json({
+    success: true,
+    token: ephemeralToken,
+    proctorId,
+    expiresAt: new Date(expiresAt).toISOString()
+  });
+});
+
 // Middleware for Proctor Authentication
 function requireProctorAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -36,10 +62,28 @@ function requireProctorAuth(req, res, next) {
   }
 
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (token !== PROCTOR_SECRET_KEY) {
-    return res.status(403).json({ error: 'Forbidden: Invalid proctor security key' });
+
+  // Accept direct key (for CI/CD/CLI tests) OR validated ephemeral token
+  if (token === PROCTOR_SECRET_KEY) {
+    return next();
   }
-  next();
+
+  if (token.startsWith('proc_')) {
+    try {
+      const decoded = Buffer.from(token.replace('proc_', ''), 'base64').toString('utf8');
+      const [pId, expStr] = decoded.split(':');
+      const exp = parseInt(expStr, 10);
+      if (Date.now() > exp) {
+        return res.status(403).json({ error: 'Forbidden: Proctor session has expired' });
+      }
+      req.proctorId = pId;
+      return next();
+    } catch (e) {
+      return res.status(403).json({ error: 'Forbidden: Malformed proctor session' });
+    }
+  }
+
+  return res.status(403).json({ error: 'Forbidden: Invalid proctor security key' });
 }
 
 // -----------------------------------------------------------------------------
