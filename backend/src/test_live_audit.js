@@ -33,7 +33,7 @@ async function runLiveAudit() {
     process.stdout.write('[2/5] Checking Auto-Update Manifest (/updates.xml)... ');
     const res = await fetch(`${BACKEND_URL}/updates.xml`);
     const xml = await res.text();
-    const hasVersion = xml.includes("version='1.2.0'");
+    const hasVersion = xml.includes("version='1.3.0'");
     const hasCodebase = xml.includes("codebase='https://contineo-attendance-tracker.onrender.com/download/contineo-attendance-collector.zip'");
     if (res.ok && hasVersion && hasCodebase) {
       console.log(`✅ PASSED (Manifest v1.2.0 served with Google Update v2.0 protocol)`);
