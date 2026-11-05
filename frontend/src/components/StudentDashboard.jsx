@@ -415,7 +415,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                   <tr>
                     <th scope="col" className="py-3 px-4">Course code</th>
                     <th scope="col" className="py-3 px-4">Course title</th>
-                    <th scope="col" className="py-3 px-4">CIE score</th>
                     <th scope="col" className="py-3 px-4">Attendance %</th>
                     <th scope="col" className="py-3 px-4">85% Cutoff Action</th>
                     <th scope="col" className="py-3 px-4 text-right">Standing</th>
@@ -431,11 +430,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                         </td>
                         <td className="py-3.5 px-4 text-slate-900 dark:text-slate-200 font-medium">
                           {sub.subject_name}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                          <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                            {sub.cie_info || 'Not recorded'}
-                          </span>
                         </td>
                         <td className="py-3.5 px-4 font-bold text-sm font-mono tabular-nums">
                           <span className={
@@ -515,10 +509,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 text-xs">
-                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                        {sub.cie_info || 'CIE: N/A'}
-                      </span>
+                    <div className="flex items-center justify-end pt-1 text-xs">
                       {getStatusBadge(sub.attendance_percentage)}
                     </div>
                   </div>

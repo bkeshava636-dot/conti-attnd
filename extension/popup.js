@@ -613,7 +613,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           row.innerHTML = `
             <div class="course-code-wrap">
               <span class="course-code font-mono">${sub.course_code}</span>
-              ${sub.cie && sub.cie !== 'N/A' ? `<span class="course-cie font-mono">CIE: ${sub.cie}</span>` : ''}
               <span class="course-recovery-tip ${isShort ? 'shortage' : 'safe'} font-mono">${targetTip}</span>
             </div>
             <div class="course-stat-wrap">
