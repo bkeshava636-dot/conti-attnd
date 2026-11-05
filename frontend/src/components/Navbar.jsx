@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, GraduationCap, RotateCw, Lock, LogOut, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, GraduationCap, RotateCw, Lock, LogOut, Sun, Moon, Download } from 'lucide-react';
 
 export default function Navbar({ 
   currentView, 
@@ -12,7 +12,9 @@ export default function Navbar({
   onOpenProctorLogin, 
   onLogoutProctor,
   darkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  installPrompt,
+  onInstallApp
 }) {
   return (
     <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/95 sticky top-0 z-40 backdrop-blur-sm transition-colors">
@@ -71,6 +73,19 @@ export default function Navbar({
 
         {/* Actions & Session Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* PWA Mobile & Desktop Install Button */}
+          {installPrompt && (
+            <button
+              type="button"
+              onClick={onInstallApp}
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition-all duration-150 active:scale-[0.98] animate-pulse"
+              title="Install app to your home screen"
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+              <span>Install App</span>
+            </button>
+          )}
+
           {/* Dark Mode Toggle */}
           <button
             type="button"

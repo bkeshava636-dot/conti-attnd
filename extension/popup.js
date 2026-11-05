@@ -597,16 +597,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (st.subjects && st.subjects.length > 0) {
         st.subjects.forEach(sub => {
           const isShort = (sub.attendance_percentage || 0) < 85;
+          const total = 40;
+          const attended = Math.round(((sub.attendance_percentage || 0) / 100) * total);
+          let targetTip = '';
+          if (isShort) {
+            const needed = Math.max(1, Math.ceil((0.85 * total - attended) / 0.15));
+            targetTip = `+${needed} for 85%`;
+          } else {
+            const canMiss = Math.max(0, Math.floor((attended - 0.85 * total) / 0.85));
+            targetTip = canMiss > 0 ? `${canMiss} safe` : 'At 85%';
+          }
+
           const row = document.createElement('div');
           row.className = 'course-item';
           row.innerHTML = `
             <div class="course-code-wrap">
               <span class="course-code font-mono">${sub.course_code}</span>
               ${sub.cie && sub.cie !== 'N/A' ? `<span class="course-cie font-mono">CIE: ${sub.cie}</span>` : ''}
+              <span class="course-recovery-tip ${isShort ? 'shortage' : 'safe'} font-mono">${targetTip}</span>
             </div>
             <div class="course-stat-wrap">
               <span class="course-pct font-mono ${isShort ? 'shortage' : 'safe'}">${sub.attendance_percentage}%</span>
-              <span class="course-tag ${isShort ? 'shortage' : 'safe'}">${isShort ? 'Shortage (<85%)' : 'Eligible'}</span>
+              <span class="course-tag ${isShort ? 'shortage' : 'safe'}">${isShort ? '<85%' : 'Eligible'}</span>
             </div>
           `;
           breakdown.appendChild(row);

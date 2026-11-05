@@ -17,6 +17,28 @@ export default function App() {
   const [showStudentLoginModal, setShowStudentLoginModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState('success');
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+
+  // Listen for PWA BeforeInstallPrompt
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') {
+      showNotification('BITM Contineo Tracker installed on home screen!', 'success');
+    }
+    setDeferredInstallPrompt(null);
+  };
 
   // Dark Mode State: default to true (Dark Mode) as requested
   const [darkMode, setDarkMode] = useState(() => {
@@ -136,6 +158,8 @@ export default function App() {
         onLogoutProctor={handleProctorLogout}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
+        installPrompt={deferredInstallPrompt}
+        onInstallApp={handleInstallApp}
       />
 
       {/* Main Content Area */}

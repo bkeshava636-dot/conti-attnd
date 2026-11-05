@@ -6,7 +6,7 @@
 const ALARM_NAME = 'CONTINEO_AUTO_SYNC';
 
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log('[Contineo Attendance Collector] Service worker initialized v1.2.0.');
+  console.log('[Contineo Attendance Collector] Service worker initialized v1.3.0.');
   
   // Default configuration
   const defaults = {

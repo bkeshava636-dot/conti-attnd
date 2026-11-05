@@ -2,17 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { 
   CheckCircle2, 
   AlertTriangle, 
-  AlertOctagon, 
   BookOpen, 
   Clock, 
   Building2,
   Search,
   ArrowUpDown,
   Copy,
-  Check,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown
+  Check
 } from 'lucide-react';
 import ShortageCalculator from './ShortageCalculator';
 
@@ -106,6 +102,34 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
     if (pct >= 85) return 'bg-emerald-500 dark:bg-emerald-400';
     if (pct >= 75) return 'bg-amber-500 dark:bg-amber-400';
     return 'bg-rose-500 dark:bg-rose-400';
+  };
+
+  // Quick Counter: Classes Needed to Reach BITM 85% Cutoff
+  const calculateRecovery = (sub) => {
+    const pct = Number(sub.attendance_percentage) || 0;
+    const total = sub.total_classes || 40;
+    const attended = sub.attended_classes !== undefined 
+      ? Number(sub.attended_classes) 
+      : Math.round((pct / 100) * total);
+
+    if (pct < 85) {
+      // Classes needed: (attended + x) / (total + x) >= 0.85
+      const needed = Math.max(1, Math.ceil((0.85 * total - attended) / 0.15));
+      return {
+        type: 'SHORTAGE',
+        needed,
+        pillText: `Need +${needed} ${needed === 1 ? 'class' : 'classes'} to reach 85%`,
+        badgeText: `+${needed} for 85%`
+      };
+    } else {
+      const canMiss = Math.max(0, Math.floor((attended - 0.85 * total) / 0.85));
+      return {
+        type: 'SAFE',
+        canMiss,
+        pillText: canMiss > 0 ? `Can miss ${canMiss} ${canMiss === 1 ? 'class' : 'classes'} safely` : 'At 85% exact cutoff',
+        badgeText: canMiss > 0 ? `${canMiss} safe margin` : 'At cutoff'
+      };
+    }
   };
 
   // Radial Progress Ring parameters
@@ -393,12 +417,13 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                     <th scope="col" className="py-3 px-4">Course title</th>
                     <th scope="col" className="py-3 px-4">CIE score</th>
                     <th scope="col" className="py-3 px-4">Attendance %</th>
-                    <th scope="col" className="py-3 px-4">Progress</th>
+                    <th scope="col" className="py-3 px-4">85% Cutoff Action</th>
                     <th scope="col" className="py-3 px-4 text-right">Standing</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                   {processedSubjects.map(sub => {
+                    const rec = calculateRecovery(sub);
                     return (
                       <tr key={sub.course_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 dark:text-white">
@@ -420,13 +445,18 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                             {sub.attendance_percentage}%
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 w-36">
-                          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden" aria-hidden="true">
-                            <div
-                              className={`h-full ${getBarColor(sub.attendance_percentage)}`}
-                              style={{ width: `${sub.attendance_percentage}%` }}
-                            />
-                          </div>
+                        <td className="py-3.5 px-4">
+                          {rec.type === 'SHORTAGE' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
+                              <AlertTriangle className="size-3 text-rose-500 shrink-0" aria-hidden="true" />
+                              <span>Attend <strong>+{rec.needed}</strong> {rec.needed === 1 ? 'class' : 'classes'} for 85%</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
+                              <CheckCircle2 className="size-3 text-emerald-500 shrink-0" aria-hidden="true" />
+                              <span>{rec.canMiss > 0 ? `Can miss ${rec.canMiss} ${rec.canMiss === 1 ? 'class' : 'classes'} safely` : 'At 85% cutoff'}</span>
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           {getStatusBadge(sub.attendance_percentage)}
@@ -441,6 +471,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
             {/* Mobile Cards View */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
               {processedSubjects.map(sub => {
+                const rec = calculateRecovery(sub);
                 return (
                   <div key={sub.course_code} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
@@ -463,6 +494,25 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                         className={`h-full ${getBarColor(sub.attendance_percentage)}`}
                         style={{ width: `${sub.attendance_percentage}%` }}
                       />
+                    </div>
+
+                    {/* Quick 85% Recovery Counter Banner */}
+                    <div className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
+                      rec.type === 'SHORTAGE' 
+                        ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60 text-rose-900 dark:text-rose-200' 
+                        : 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60 text-emerald-900 dark:text-emerald-200'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {rec.type === 'SHORTAGE' ? (
+                          <AlertTriangle className="size-4 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
+                        ) : (
+                          <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                        )}
+                        <span className="font-medium">{rec.pillText}</span>
+                      </div>
+                      <span className="font-mono font-bold text-[11px] bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-2xs border border-inherit">
+                        {rec.type === 'SHORTAGE' ? `+${rec.needed}` : `${rec.canMiss} SAFE`}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between pt-1 text-xs">

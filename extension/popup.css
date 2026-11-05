@@ -600,6 +600,25 @@ body {
   color: var(--text-dim);
 }
 
+.course-recovery-tip {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.course-recovery-tip.shortage {
+  color: var(--danger);
+  background-color: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.course-recovery-tip.safe {
+  color: var(--success);
+  background-color: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
 .course-stat-wrap {
   display: flex;
   align-items: center;
