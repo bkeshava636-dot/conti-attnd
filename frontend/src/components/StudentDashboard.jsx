@@ -72,19 +72,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
       });
   }, [subjects, filter, searchQuery, sortBy]);
 
-  // Calculate row-level skip buffer / classes needed
-  const calculateCourseBuffer = (pct) => {
-    const ESTIMATED_TOTAL = 40;
-    const attended = Math.round((pct / 100) * ESTIMATED_TOTAL);
-    if (pct >= 75) {
-      const skip = Math.max(0, Math.floor((attended / 0.75) - ESTIMATED_TOTAL));
-      return { type: 'safe', count: skip };
-    } else {
-      const needed = Math.max(0, Math.ceil((0.75 * ESTIMATED_TOTAL - attended) / 0.25));
-      return { type: 'shortage', count: needed };
-    }
-  };
-
   // Status Badge with Status Dot (High-Contrast in Light & Dark modes)
   const getStatusBadge = (pct) => {
     if (pct >= 85) {
@@ -403,7 +390,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                     <th scope="col" className="py-3 px-4">CIE score</th>
                     <th scope="col" className="py-3 px-4">Attendance %</th>
                     <th scope="col" className="py-3 px-4">Progress</th>
-                    <th scope="col" className="py-3 px-4">Bunk buffer / recovery</th>
                     <th scope="col" className="py-3 px-4 text-right">Standing</th>
                   </tr>
                 </thead>
@@ -438,17 +424,6 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                               style={{ width: `${sub.attendance_percentage}%` }}
                             />
                           </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {buffer.type === 'safe' ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-md font-mono">
-                              Can miss {buffer.count} class{buffer.count === 1 ? '' : 'es'}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 px-2 py-0.5 rounded-md font-mono">
-                              Attend {buffer.count} consecutive
-                            </span>
-                          )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           {getStatusBadge(sub.attendance_percentage)}
@@ -488,16 +463,10 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                       />
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-                      {buffer.type === 'safe' ? (
-                        <span className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-md font-mono">
-                          Can miss {buffer.count} class{buffer.count === 1 ? '' : 'es'}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-medium text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 px-2 py-0.5 rounded-md font-mono">
-                          Need {buffer.count} classes
-                        </span>
-                      )}
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                        {sub.cie_info || 'CIE: N/A'}
+                      </span>
                       {getStatusBadge(sub.attendance_percentage)}
                     </div>
                   </div>

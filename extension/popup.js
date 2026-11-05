@@ -41,11 +41,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // State
   let config = {
-    backendUrl: 'http://localhost:5000',
+    backendUrl: 'https://contineo-attendance-tracker.onrender.com',
     proctorToken: 'demo-proctor-secret-key-bitm'
   };
   let activeTab = null;
   let isProcessing = false;
+
+  const detectionHelper = document.getElementById('detection-helper');
+  const linkHelperFixture = document.getElementById('link-helper-fixture');
+
+  if (linkHelperFixture) {
+    linkHelperFixture.addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
+    });
+  }
 
   // Load config from chrome.storage
   const stored = await chrome.storage.local.get(['backendUrl', 'proctorToken', 'lastReport']);
@@ -136,14 +146,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                           tab.url.includes('/fixture');
 
       if (!isContineo) {
-        setPortalState('Standby', 'warning', 'Open BITM Contineo portal or test fixture');
+        setPortalState('Standby', 'warning', 'Please open bitm.contineo.in');
+        if (detectionHelper) detectionHelper.classList.remove('hidden');
         btnCollect.disabled = false;
-        btnActionText.textContent = 'OPEN CONTINEO PORTAL';
+        btnActionText.textContent = 'Open BITM Contineo Portal';
         btnCollect.onclick = () => {
-          chrome.tabs.create({ url: `${config.backendUrl}/fixture` });
+          chrome.tabs.create({ url: 'https://bitm.contineo.in/' });
         };
         return;
       }
+
+      if (detectionHelper) detectionHelper.classList.add('hidden');
 
       // Ensure content script is injected and responsive
       await ensureContentScriptInjected(tab.id);
@@ -153,18 +166,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (chrome.runtime.lastError || !res || !res.success) {
           setPortalState('Active (0)', 'warning', 'No student cards detected yet');
           countDetected.textContent = '0';
-          detectionDetail.textContent = 'Ensure you are on the counselling roster page';
+          detectionDetail.textContent = 'Ensure you are on the SIMS attendance roster page';
           btnCollect.disabled = true;
           return;
         }
 
-        setPortalState('Connected', 'active', 'SIMS Counselling Page');
+        setPortalState('Connected', 'active', 'SIMS Attendance Page');
         countDetected.textContent = res.count;
         detectionDetail.textContent = `${res.count} student profiles ready for extraction`;
         valProcessed.textContent = `0/${res.count}`;
 
         btnCollect.disabled = false;
-        btnActionText.textContent = 'COLLECT & PUBLISH ATTENDANCE';
+        btnActionText.textContent = 'Sync Contineo Attendance';
         btnCollect.onclick = handleOneClickWorkflow;
       });
 
@@ -351,10 +364,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
 
-      btnActionText.textContent = 'SYNC COMPLETED ✓';
+      btnActionText.textContent = 'Sync Completed ✓';
       setTimeout(() => {
         btnCollect.disabled = false;
-        btnActionText.textContent = 'RE-COLLECT & PUBLISH';
+        btnActionText.textContent = 'Re-Sync Attendance';
         isProcessing = false;
       }, 2500);
 

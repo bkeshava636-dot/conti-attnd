@@ -53,7 +53,7 @@ export default function ShortageCalculator({ overallPercentage, subjects, darkMo
             <Calculator className="size-4" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">Attendance Forecast &amp; Bunk Planner</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">Attendance Forecast &amp; Recovery Calculator</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Calculate recovery sessions and safe margin thresholds</p>
           </div>
         </div>

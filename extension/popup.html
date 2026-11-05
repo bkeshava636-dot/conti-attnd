@@ -8,17 +8,24 @@
 </head>
 <body>
   <div class="extension-container">
-    <!-- Header -->
+    
+    <!-- Top Header matching Web Portal Dark Theme -->
     <header class="app-header">
       <div class="header-brand">
         <div class="brand-badge">BITM</div>
         <div>
-          <h1 class="brand-title">Contineo Collector</h1>
-          <p class="brand-subtitle">Automated Attendance Publisher</p>
+          <div class="brand-title-wrap">
+            <span class="brand-title">Contineo Attendance</span>
+            <span class="brand-sims-tag">SIMS</span>
+          </div>
+          <p class="brand-subtitle">Ballari Institute of Tech &amp; Mgmt</p>
         </div>
       </div>
-      <button id="btn-settings-toggle" class="btn-icon" title="Configure Backend & Settings">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <button id="btn-settings-toggle" class="btn-icon" title="Connection Settings" aria-label="Connection Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
       </button>
     </header>
 
@@ -27,37 +34,50 @@
       <div class="status-item">
         <span class="status-dot" id="dot-portal"></span>
         <span class="status-label">Portal:</span>
-        <strong id="status-portal">Checking...</strong>
+        <strong id="status-portal" class="status-val">Detecting...</strong>
       </div>
       <div class="status-item">
         <span class="status-dot" id="dot-backend"></span>
-        <span class="status-label">Backend:</span>
-        <strong id="status-backend">Checking...</strong>
+        <span class="status-label">Cloud:</span>
+        <strong id="status-backend" class="status-val">Connecting...</strong>
       </div>
     </div>
 
-    <!-- Detection Banner -->
+    <!-- Active Detection Card -->
     <div class="detection-card">
       <div class="detection-info">
         <span class="detection-label">Students Detected</span>
-        <span class="detection-count" id="count-detected">0</span>
+        <span class="detection-count font-mono" id="count-detected">0</span>
       </div>
-      <div class="detection-detail" id="detection-detail-text">Scanning current page...</div>
+      <div class="detection-detail" id="detection-detail-text">Scanning active browser tab...</div>
     </div>
 
-    <!-- Main Primary Action -->
+    <!-- Primary Action Button -->
     <div class="action-block">
       <button id="btn-collect-publish" class="btn-primary" disabled>
-        <span class="btn-icon-symbol">⚡</span>
-        <span id="btn-action-text">COLLECT & PUBLISH ATTENDANCE</span>
+        <span id="btn-action-text">Sync Contineo Attendance</span>
       </button>
+    </div>
+
+    <!-- How Detection Works Helper (Shown when not on Contineo) -->
+    <div id="detection-helper" class="helper-box">
+      <div class="helper-title">How it connects to Contineo:</div>
+      <ol class="helper-steps">
+        <li>Open <strong>bitm.contineo.in</strong> in your browser (on campus/VPN).</li>
+        <li>Log in as Proctor and navigate to the <strong>Student Attendance / Counselling</strong> page.</li>
+        <li>Click this extension, it will instantly detect the student roster!</li>
+      </ol>
+      <div class="helper-alt">
+        <span>Testing without campus network?</span>
+        <a href="#" id="link-helper-fixture">Open demo fixture simulator</a>
+      </div>
     </div>
 
     <!-- Collection Progress Section -->
     <div id="progress-container" class="progress-container hidden">
       <div class="progress-header">
-        <span class="progress-label" id="progress-stage-label">Preparing Extraction...</span>
-        <span class="progress-percent" id="progress-percent-label">0%</span>
+        <span class="progress-label" id="progress-stage-label">Extracting student tables...</span>
+        <span class="progress-percent font-mono" id="progress-percent-label">0%</span>
       </div>
       <div class="progress-bar-track">
         <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%;"></div>
@@ -68,64 +88,69 @@
     <div class="metrics-grid">
       <div class="metric-box">
         <div class="metric-title">Processed</div>
-        <div class="metric-value" id="val-processed">0/0</div>
+        <div class="metric-value font-mono" id="val-processed">0/0</div>
       </div>
       <div class="metric-box success">
         <div class="metric-title">Successful</div>
-        <div class="metric-value" id="val-successful">0</div>
+        <div class="metric-value font-mono" id="val-successful">0</div>
       </div>
       <div class="metric-box warning">
         <div class="metric-title">Duplicates</div>
-        <div class="metric-value" id="val-duplicates">0</div>
+        <div class="metric-value font-mono" id="val-duplicates">0</div>
       </div>
       <div class="metric-box danger">
         <div class="metric-title">Failed</div>
-        <div class="metric-value" id="val-failed">0</div>
+        <div class="metric-value font-mono" id="val-failed">0</div>
       </div>
     </div>
 
-    <!-- Success / Error Notice Box -->
+    <!-- Result Notice Box -->
     <div id="result-notice" class="result-notice hidden"></div>
 
-    <!-- Extracted Students List Preview (Collapsible) -->
+    <!-- Extracted Students List (Collapsible) -->
     <div class="records-accordion">
       <button id="btn-toggle-records" class="accordion-header">
-        <span>Extracted Student Details</span>
+        <span>Extracted student details</span>
         <span id="accordion-arrow">▼</span>
       </button>
       <div id="records-content" class="accordion-content hidden">
         <div id="records-list" class="records-list">
-          <p class="empty-state">No attendance collected yet. Click button above.</p>
+          <p class="empty-state">No attendance collected yet. Click the sync button above.</p>
         </div>
       </div>
     </div>
 
     <!-- Footer Links -->
     <footer class="app-footer">
-      <a href="http://localhost:5173" target="_blank" class="footer-link">Open Student Web Portal ↗</a>
-      <a href="#" id="link-open-test-fixture" class="footer-link-secondary">Open Test Fixture</a>
+      <a href="https://contineo-attendance-tracker.onrender.com" target="_blank" class="footer-link">
+        Open Student Web Portal ↗
+      </a>
+      <a href="https://bitm.contineo.in" target="_blank" class="footer-link-secondary">
+        bitm.contineo.in ↗
+      </a>
     </footer>
 
     <!-- Settings Modal Drawer -->
     <div id="settings-modal" class="settings-modal hidden">
       <div class="settings-card">
         <div class="settings-header">
-          <h3>Connection Settings</h3>
+          <h3>Connection settings</h3>
           <button id="btn-close-settings" class="btn-icon">✕</button>
         </div>
         <div class="form-group">
-          <label for="input-backend-url">Backend Server URL:</label>
-          <input type="text" id="input-backend-url" placeholder="http://localhost:5000" />
+          <label for="input-backend-url">Cloud Server URL:</label>
+          <input type="text" id="input-backend-url" placeholder="https://contineo-attendance-tracker.onrender.com" />
         </div>
         <div class="form-group">
-          <label for="input-proctor-token">Proctor Auth Key:</label>
-          <input type="password" id="input-proctor-token" placeholder="Proctor Key" />
+          <label for="input-proctor-token">Proctor Security Passkey:</label>
+          <input type="password" id="input-proctor-token" placeholder="Passkey" />
         </div>
         <div class="settings-actions">
-          <button id="btn-save-settings" class="btn-save">Save & Reconnect</button>
+          <button id="btn-save-settings" class="btn-save">Save &amp; reconnect</button>
         </div>
       </div>
     </div>
+
   </div>
 
   <script src="popup.js"></script>

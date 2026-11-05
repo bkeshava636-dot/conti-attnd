@@ -10,6 +10,7 @@
   ],
   "host_permissions": [
     "*://*.contineo.in/*",
+    "https://*.onrender.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
     "file:///*"
@@ -37,6 +38,7 @@
     {
       "matches": [
         "*://*.contineo.in/*",
+        "https://*.onrender.com/*",
         "http://localhost/*",
         "http://127.0.0.1/*",
         "file:///*"
