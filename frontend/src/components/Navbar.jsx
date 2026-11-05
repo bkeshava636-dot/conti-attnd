@@ -78,7 +78,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={onInstallApp}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition-all duration-150 active:scale-[0.98] animate-pulse"
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition-all duration-150 active:scale-[0.98]"
               title="Install app to your home screen"
             >
               <Download className="size-3.5" aria-hidden="true" />
