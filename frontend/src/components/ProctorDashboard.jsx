@@ -12,7 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequireAuth }) {
+export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequireAuth, onNotify }) {
   const [roster, setRoster] = useState([]);
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +86,7 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
     a.href = url;
     a.download = `BITM_Attendance_Report_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
+    onNotify?.('Exported cohort roster to CSV');
   };
 
   const getStatusBadge = (pct) => {

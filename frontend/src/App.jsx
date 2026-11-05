@@ -5,6 +5,7 @@ import StudentSkeleton from './components/StudentSkeleton';
 import ProctorDashboard from './components/ProctorDashboard';
 import LoginModal from './components/LoginModal';
 import ProctorLoginModal from './components/ProctorLoginModal';
+import Toast from './components/Toast';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('student'); // 'student' | 'proctor'
@@ -14,6 +15,8 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loginError, setLoginError] = useState(null);
   const [showStudentLoginModal, setShowStudentLoginModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [toastType, setToastType] = useState('success');
 
   // Proctor Auth State
   const [proctorToken, setProctorToken] = useState(() => sessionStorage.getItem('proctor_session_token') || null);
@@ -24,6 +27,11 @@ export default function App() {
       fetchStudentAttendance(currentUSN);
     }
   }, [currentUSN]);
+
+  const showNotification = (msg, type = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+  };
 
   async function fetchStudentAttendance(usn) {
     setLoading(true);
@@ -48,13 +56,15 @@ export default function App() {
     setIsRefreshing(true);
     if (currentUSN) {
       await fetchStudentAttendance(currentUSN);
+      showNotification('Attendance records refreshed successfully');
     }
-    setTimeout(() => setIsRefreshing(false), 600);
+    setTimeout(() => setIsRefreshing(false), 500);
   };
 
   const handleSelectStudentFromProctor = (usn) => {
     setCurrentUSN(usn);
     setCurrentView('student');
+    showNotification(`Switched to student ${usn}`);
   };
 
   const handleOpenProctorLogin = () => {
@@ -70,16 +80,18 @@ export default function App() {
     setProctorToken(token);
     setShowProctorLoginModal(false);
     setCurrentView('proctor');
+    showNotification('Faculty authentication verified');
   };
 
   const handleProctorLogout = () => {
     sessionStorage.removeItem('proctor_session_token');
     setProctorToken(null);
     setCurrentView('student');
+    showNotification('Exited faculty administration mode', 'info');
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50 text-slate-900 flex flex-col">
+    <div className="min-h-dvh bg-slate-50 text-slate-900 flex flex-col antialiased">
       {/* Top Navigation */}
       <Navbar
         currentView={currentView}
@@ -105,13 +117,18 @@ export default function App() {
           loading && !studentData ? (
             <StudentSkeleton />
           ) : (
-            <StudentDashboard data={studentData} onRefresh={handleRefresh} />
+            <StudentDashboard 
+              data={studentData} 
+              onRefresh={handleRefresh} 
+              onNotify={showNotification}
+            />
           )
         ) : (
           <ProctorDashboard 
             onSelectStudent={handleSelectStudentFromProctor}
             proctorToken={proctorToken}
             onRequireAuth={() => setShowProctorLoginModal(true)}
+            onNotify={showNotification}
           />
         )}
       </main>
@@ -122,6 +139,7 @@ export default function App() {
           onLogin={(usn) => {
             setCurrentUSN(usn);
             fetchStudentAttendance(usn);
+            showNotification(`Loaded attendance for ${usn}`);
           }}
           error={loginError}
         />
@@ -134,6 +152,13 @@ export default function App() {
           onSuccess={handleProctorLoginSuccess}
         />
       )}
+
+      {/* Toast Notification Container */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setToastMessage(null)}
+      />
 
       {/* Footer */}
       <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs text-slate-500">
