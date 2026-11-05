@@ -25,89 +25,93 @@ export default function ShortageCalculator({ overallPercentage, subjects }) {
   }
 
   return (
-    <section className="bg-slate-900 border border-slate-800 rounded-lg p-5 sm:p-6 shadow-sm" aria-label="Shortage Calculator">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-800 gap-2">
+    <section className="bg-white border border-slate-200/80 rounded-xl p-5 sm:p-6 shadow-xs" aria-label="Shortage calculator">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-100 gap-2">
         <div className="flex items-center gap-2">
-          <Calculator className="w-4 h-4 text-sky-400" aria-hidden="true" />
-          <h2 className="font-bold text-white text-sm">Attendance Forecast and Shortage Planner</h2>
+          <Calculator className="size-4 text-slate-700" aria-hidden="true" />
+          <h2 className="font-semibold text-slate-900 text-sm">Attendance forecast and shortage recovery planner</h2>
         </div>
-        <span className="text-[11px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 self-start sm:self-auto">
-          VTU Standard: 75% Examination Minimum
+        <span className="text-[11px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 self-start sm:self-auto font-mono">
+          VTU Standard: 75% exam minimum
         </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label htmlFor="course-select" className="block text-xs font-semibold text-slate-300 mb-1.5">
-            Select Course to Evaluate
+          <label htmlFor="course-select" className="block text-xs font-medium text-slate-700 mb-1.5">
+            Select course to evaluate
           </label>
           <select
             id="course-select"
             value={selectedSubjectCode}
             onChange={(e) => setSelectedSubjectCode(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 min-h-[44px]"
+            className="w-full bg-white border border-slate-200 rounded-lg px-3 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
           >
-            <option value="ALL">Overall Aggregate Attendance ({overallPercentage}%)</option>
+            <option value="ALL">Overall aggregate attendance ({overallPercentage}%)</option>
             {subjects.map(s => (
               <option key={s.course_code} value={s.course_code}>
-                {s.course_code}: {s.subject_name.slice(0, 28)} ({s.attendance_percentage}%)
+                {s.course_code}: {s.subject_name.slice(0, 30)} ({s.attendance_percentage}%)
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <span className="block text-xs font-semibold text-slate-300 mb-1.5">
-            Target Eligibility Threshold
+          <span className="block text-xs font-medium text-slate-700 mb-1.5">
+            Target eligibility threshold
           </span>
-          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Target Percentage">
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Target percentage">
             {[75, 80, 85].map(t => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTargetPercentage(t)}
-                className={`py-2 rounded text-xs font-bold transition border min-h-[44px] ${
+                className={`h-9 rounded-lg text-xs font-medium transition-all duration-150 active:scale-[0.98] border ${
                   targetPercentage === t
-                    ? 'bg-sky-700 text-white border-sky-600 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                {t}% Target
+                {t}% target
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Outcome Banner with High Contrast */}
-      <div className="rounded p-4 bg-slate-950 border border-slate-800 flex items-center gap-4">
+      {/* Outcome Banner */}
+      <div className={`rounded-lg p-4 border flex items-center gap-4 ${
+        currentPct >= targetPercentage 
+          ? 'bg-emerald-50/60 border-emerald-200/80' 
+          : 'bg-rose-50/60 border-rose-200/80'
+      }`}>
         {currentPct >= targetPercentage ? (
-          <div className="h-10 w-10 rounded bg-emerald-950 border border-emerald-800 flex items-center justify-center text-emerald-400 shrink-0" aria-hidden="true">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="size-9 rounded-lg bg-emerald-100 border border-emerald-300/80 flex items-center justify-center text-emerald-800 shrink-0" aria-hidden="true">
+            <CheckCircle2 className="size-5" />
           </div>
         ) : (
-          <div className="h-10 w-10 rounded bg-rose-950 border border-rose-800 flex items-center justify-center text-rose-400 shrink-0" aria-hidden="true">
-            <AlertOctagon className="w-5 h-5" />
+          <div className="size-9 rounded-lg bg-rose-100 border border-rose-300/80 flex items-center justify-center text-rose-800 shrink-0" aria-hidden="true">
+            <AlertOctagon className="size-5" />
           </div>
         )}
 
         <div className="text-xs">
           {currentPct >= targetPercentage ? (
             <div>
-              <p className="font-bold text-emerald-400 text-sm">
-                Safe Margin: You can miss up to {canSkip} class{canSkip === 1 ? '' : 'es'}
+              <p className="font-semibold text-emerald-900 text-sm">
+                Safe buffer: You can miss up to {canSkip} class{canSkip === 1 ? '' : 'es'}
               </p>
-              <p className="text-slate-400 mt-0.5">
-                Your current standing of <strong className="text-slate-200 font-tabular">{currentPct}%</strong> meets the {targetPercentage}% requirement.
+              <p className="text-emerald-700 mt-0.5">
+                Your current standing of <strong className="font-mono tabular-nums">{currentPct}%</strong> meets the {targetPercentage}% requirement.
               </p>
             </div>
           ) : (
             <div>
-              <p className="font-bold text-rose-400 text-sm">
-                Shortage Notice: Attend the next {classesNeeded} class{classesNeeded === 1 ? '' : 'es'} consecutively
+              <p className="font-semibold text-rose-900 text-sm">
+                Recovery plan: Attend the next {classesNeeded} class{classesNeeded === 1 ? '' : 'es'} consecutively
               </p>
-              <p className="text-slate-400 mt-0.5">
-                Required to raise attendance from <strong className="text-slate-200 font-tabular">{currentPct}%</strong> to your {targetPercentage}% goal.
+              <p className="text-rose-700 mt-0.5">
+                Required to lift current attendance from <strong className="font-mono tabular-nums">{currentPct}%</strong> to your {targetPercentage}% goal.
               </p>
             </div>
           )}

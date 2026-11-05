@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, ArrowRight, AlertCircle, X } from 'lucide-react';
+import { GraduationCap, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function LoginModal({ onLogin, error }) {
   const [usnInput, setUsnInput] = useState('3BR23CS001');
@@ -14,35 +14,37 @@ export default function LoginModal({ onLogin, error }) {
   };
 
   const sampleStudents = [
-    { usn: '3BR23CS001', name: 'A Vedha Shree', tag: 'Safe (86.5%)' },
-    { usn: '3BR23CS002', name: 'Manideep M', tag: 'Safe (88.7%)' },
-    { usn: '3BR23CS005', name: 'Bharath Kumar R', tag: 'Shortage (72.9%)' },
-    { usn: '3BR23CS012', name: 'Mohammed Rehan', tag: 'Shortage (71.9%)' },
+    { usn: '3BR23CS001', name: 'A Vedha Shree', tag: 'Safe (86.5%)', safe: true },
+    { usn: '3BR23CS002', name: 'Manideep M', tag: 'Safe (88.7%)', safe: true },
+    { usn: '3BR23CS005', name: 'Bharath Kumar R', tag: 'Shortage (72.9%)', safe: false },
+    { usn: '3BR23CS012', name: 'Mohammed Rehan', tag: 'Shortage (71.9%)', safe: false },
   ];
 
   return (
-    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby="login-title">
-      <div className="bg-slate-900 border border-slate-800 rounded-lg max-w-md w-full p-6 sm:p-7 shadow-xl relative">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div className="bg-white border border-slate-200/80 rounded-xl max-w-md w-full p-6 sm:p-7 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="h-10 w-10 rounded bg-sky-950 border border-sky-800 flex items-center justify-center mx-auto mb-3 text-sky-400" aria-hidden="true">
-            <GraduationCap className="w-5 h-5" />
+          <div className="size-10 rounded-xl bg-slate-900 text-white flex items-center justify-center mx-auto mb-3 shadow-xs" aria-hidden="true">
+            <GraduationCap className="size-5" />
           </div>
-          <h2 id="login-title" className="text-xl font-bold text-white tracking-tight">Student Attendance Portal</h2>
-          <p className="text-xs text-slate-400 mt-1">Ballari Institute of Technology &amp; Management</p>
+          <h2 id="login-title" className="text-xl font-semibold text-slate-900 tracking-tight text-balance">
+            Student Attendance Portal
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">Ballari Institute of Technology &amp; Management</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-rose-950/80 border border-rose-800 rounded flex items-center gap-2.5 text-xs text-rose-300" role="alert">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" aria-hidden="true" />
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2.5 text-xs text-rose-800" role="alert">
+            <AlertCircle className="size-4 shrink-0 text-rose-600" aria-hidden="true" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="student-usn" className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label htmlFor="student-usn" className="block text-xs font-medium text-slate-700 mb-1.5">
               University Seat Number (USN)
             </label>
             <input
@@ -52,24 +54,25 @@ export default function LoginModal({ onLogin, error }) {
               onChange={(e) => setUsnInput(e.target.value.toUpperCase())}
               placeholder="e.g. 3BR23CS001"
               required
-              className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded px-3.5 py-2.5 text-sm font-mono text-white placeholder-slate-600 focus:outline-none transition uppercase min-h-[44px]"
+              autoFocus
+              className="w-full bg-white border border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 rounded-lg px-3.5 h-10 text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none transition-all uppercase"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold rounded transition flex items-center justify-center gap-2 min-h-[44px]"
+            className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 shadow-xs"
           >
-            <span>View Attendance Record</span>
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            <span>View attendance record</span>
+            <ArrowRight className="size-3.5" aria-hidden="true" />
           </button>
         </form>
 
         {/* Verified Sample Profiles for Testing */}
-        <div className="mt-6 pt-5 border-t border-slate-800">
-          <p className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">
-            Test Student Cohort:
+        <div className="mt-6 pt-5 border-t border-slate-100">
+          <p className="text-[11px] font-medium text-slate-500 mb-2 uppercase tracking-wider">
+            Quick selection sample roster
           </p>
           <div className="grid grid-cols-2 gap-2">
             {sampleStudents.map(st => (
@@ -80,11 +83,12 @@ export default function LoginModal({ onLogin, error }) {
                   setUsnInput(st.usn);
                   onLogin(st.usn);
                 }}
-                className="p-2.5 text-left bg-slate-950 border border-slate-800 hover:border-sky-700 rounded transition min-h-[44px]"
+                className="p-2.5 text-left bg-slate-50 border border-slate-200/80 hover:bg-slate-100 hover:border-slate-300 rounded-lg transition-all duration-150 active:scale-[0.98]"
               >
-                <div className="font-mono text-xs font-bold text-sky-400">{st.usn}</div>
-                <div className="text-[11px] text-slate-300 truncate">{st.name}</div>
-                <div className={`text-[10px] font-semibold mt-0.5 ${st.tag.includes('Safe') ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <div className="font-mono text-xs font-semibold text-slate-900">{st.usn}</div>
+                <div className="text-[11px] text-slate-600 truncate mt-0.5">{st.name}</div>
+                <div className={`text-[10px] font-medium mt-1 inline-flex items-center gap-1 ${st.safe ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  <span className={`size-1.5 rounded-full ${st.safe ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                   {st.tag}
                 </div>
               </button>

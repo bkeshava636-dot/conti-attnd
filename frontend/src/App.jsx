@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import StudentDashboard from './components/StudentDashboard';
+import StudentSkeleton from './components/StudentSkeleton';
 import ProctorDashboard from './components/ProctorDashboard';
 import LoginModal from './components/LoginModal';
 import ProctorLoginModal from './components/ProctorLoginModal';
@@ -78,7 +79,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-dvh bg-slate-50 text-slate-900 flex flex-col">
       {/* Top Navigation */}
       <Navbar
         currentView={currentView}
@@ -102,10 +103,7 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'student' ? (
           loading && !studentData ? (
-            <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
-              <div className="h-8 w-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm">Fetching student record...</p>
-            </div>
+            <StudentSkeleton />
           ) : (
             <StudentDashboard data={studentData} onRefresh={handleRefresh} />
           )
@@ -138,15 +136,15 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            Contineo Attendance Tracker • Ballari Institute of Technology & Management
+            Contineo Attendance Tracker • Ballari Institute of Technology &amp; Management
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <a href="/fixture" target="_blank" className="hover:text-sky-400 transition">Contineo SIMS Simulator</a>
+          <div className="flex items-center gap-4 text-slate-600">
+            <a href="/fixture" target="_blank" className="hover:text-slate-900 transition-colors">Contineo SIMS simulator</a>
             <span>•</span>
-            <a href="http://localhost:5000/api/health" target="_blank" className="hover:text-sky-400 transition">API Health</a>
+            <a href="http://localhost:5000/api/health" target="_blank" className="hover:text-slate-900 transition-colors">API health</a>
           </div>
         </div>
       </footer>
