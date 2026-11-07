@@ -4,16 +4,16 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Known subjects mapping for 3rd Sem BITM CSE
 const KNOWN_SUBJECTS = {
-  '1BMCS301': 'Mathematics for Computer Science III',
-  '1BCS302': 'Data Structures and Applications',
-  '1BCS303': 'Analog & Digital Electronics',
-  '1BCS304': 'Computer Organization & Architecture',
-  '1BCS305': 'Object Oriented Programming with Java',
-  '1BCS306L': 'Data Structures Laboratory',
-  '1BCS307L': 'Analog & Digital Electronics Laboratory',
-  '1BCS308L': 'Object Oriented Programming Laboratory',
-  '1BCSCP310': 'Social Connect and Responsibility',
-  '1BPSW309': 'Professional Writing Skills in English'
+  '1BMCS301': 'Graph Theory and Discrete Mathematical Structures',
+  '1BCS302': 'Operating System',
+  '1BCS303': 'Object Oriented Programming with Java',
+  '1BCS304': 'Digital System Design & Computer Organization',
+  '1BCS305': 'Data Structures and Applications',
+  '1BCS306L': 'Object Oriented Programming Lab',
+  '1BCS307L': 'Digital Lab',
+  '1BCS308L': 'Data Structures Lab',
+  '1BCSCP310': 'Community Project',
+  '1BPSW309': 'Professional Skills for Workplace'
 };
 
 class DataRepository {

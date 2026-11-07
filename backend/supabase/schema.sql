@@ -133,15 +133,15 @@ CREATE POLICY "Proctors can view and create imports"
 -- 6. PRE-POPULATE KNOWN 3RD SEMESTER BITM CSE SUBJECTS CATALOG
 -- ------------------------------------------------------------------------------
 INSERT INTO public.subjects (course_code, subject_name, semester, department) VALUES
-    ('1BMCS301', 'Mathematics for Computer Science III', 'SEM03', 'CSE'),
-    ('1BCS302', 'Data Structures and Applications', 'SEM03', 'CSE'),
-    ('1BCS303', 'Analog & Digital Electronics', 'SEM03', 'CSE'),
-    ('1BCS304', 'Computer Organization & Architecture', 'SEM03', 'CSE'),
-    ('1BCS305', 'Object Oriented Programming with Java', 'SEM03', 'CSE'),
-    ('1BCS306L', 'Data Structures Laboratory', 'SEM03', 'CSE'),
-    ('1BCS307L', 'Analog & Digital Electronics Laboratory', 'SEM03', 'CSE'),
-    ('1BCS308L', 'Object Oriented Programming Laboratory', 'SEM03', 'CSE'),
-    ('1BCSCP310', 'Social Connect and Responsibility', 'SEM03', 'CSE'),
-    ('1BPSW309', 'Professional Writing Skills in English', 'SEM03', 'CSE')
+    ('1BMCS301', 'Graph Theory and Discrete Mathematical Structures', 'SEM03', 'CSE'),
+    ('1BCS302', 'Operating System', 'SEM03', 'CSE'),
+    ('1BCS303', 'Object Oriented Programming with Java', 'SEM03', 'CSE'),
+    ('1BCS304', 'Digital System Design & Computer Organization', 'SEM03', 'CSE'),
+    ('1BCS305', 'Data Structures and Applications', 'SEM03', 'CSE'),
+    ('1BCS306L', 'Object Oriented Programming Lab', 'SEM03', 'CSE'),
+    ('1BCS307L', 'Digital Lab', 'SEM03', 'CSE'),
+    ('1BCS308L', 'Data Structures Lab', 'SEM03', 'CSE'),
+    ('1BCSCP310', 'Community Project', 'SEM03', 'CSE'),
+    ('1BPSW309', 'Professional Skills for Workplace', 'SEM03', 'CSE')
 ON CONFLICT (course_code) DO UPDATE
 SET subject_name = EXCLUDED.subject_name;
