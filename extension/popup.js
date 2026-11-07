@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnCollect = document.getElementById('btn-collect-publish');
   const btnActionText = document.getElementById('btn-action-text');
 
+  const offlineQueueCard = document.getElementById('offline-queue-card');
+  const offlineQueueText = document.getElementById('offline-queue-text');
+  const btnSyncOfflineQueue = document.getElementById('btn-sync-offline-queue');
+
   const progressContainer = document.getElementById('progress-container');
   const progressStage = document.getElementById('progress-stage-label');
   const progressPercent = document.getElementById('progress-percent-label');
@@ -141,8 +145,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inspect Active Tab
   await initTabInspection();
 
+  // Check Offline Queue
+  await checkOfflineQueueCard();
+
   // Event Listeners
   btnCollect.addEventListener('click', handleOneClickWorkflow);
+
+  if (btnSyncOfflineQueue) {
+    btnSyncOfflineQueue.addEventListener('click', async () => {
+      btnSyncOfflineQueue.disabled = true;
+      btnSyncOfflineQueue.textContent = 'Uploading...';
+      await drainOfflineQueue();
+      btnSyncOfflineQueue.disabled = false;
+      btnSyncOfflineQueue.textContent = 'Upload Now';
+    });
+  }
 
   btnToggleRecords.addEventListener('click', () => {
     const isHidden = recordsContent.classList.toggle('hidden');
@@ -233,12 +250,68 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         statusBackend.textContent = 'Connected';
         dotBackend.className = 'status-dot active';
+        // Auto-drain offline queue if any batch was cached
+        await drainOfflineQueue();
       } else {
         throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
       statusBackend.textContent = 'Offline';
       dotBackend.className = 'status-dot error';
+      checkOfflineQueueCard();
+    }
+  }
+
+  async function checkOfflineQueueCard() {
+    try {
+      const data = await chrome.storage.local.get(['offlinePendingPayload']);
+      if (data.offlinePendingPayload && data.offlinePendingPayload.studentCount) {
+        if (offlineQueueCard) offlineQueueCard.classList.remove('hidden');
+        if (offlineQueueText) {
+          offlineQueueText.textContent = `${data.offlinePendingPayload.studentCount} students queued offline (will auto-upload)`;
+        }
+      } else {
+        if (offlineQueueCard) offlineQueueCard.classList.add('hidden');
+      }
+    } catch (e) {}
+  }
+
+  async function drainOfflineQueue() {
+    try {
+      const data = await chrome.storage.local.get(['offlinePendingPayload']);
+      if (!data.offlinePendingPayload || !data.offlinePendingPayload.payload) {
+        checkOfflineQueueCard();
+        return;
+      }
+
+      const { payload, studentCount } = data.offlinePendingPayload;
+      if (statusBackend) statusBackend.textContent = 'Uploading queue...';
+
+      const res = await fetch(`${config.backendUrl}/api/attendance/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.proctorToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        await chrome.storage.local.remove(['offlinePendingPayload']);
+        if (statusBackend) statusBackend.textContent = 'Connected';
+        checkOfflineQueueCard();
+
+        resultNotice.className = 'result-notice success';
+        resultNotice.innerHTML = `
+          <strong>Offline Queue Uploaded!</strong><br>
+          Cached batch of <strong>${studentCount} students</strong> successfully uploaded to cloud.<br>
+          <span style="font-size: 11px; opacity: 0.9;">Synced at: ${new Date().toLocaleTimeString()}</span>
+        `;
+        resultNotice.classList.remove('hidden');
+      }
+    } catch (e) {
+      console.warn('[Offline Queue] Upload deferred (server still unreachable):', e);
+      checkOfflineQueueCard();
     }
   }
 
@@ -437,6 +510,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       const publishResult = await res.json();
+      await chrome.storage.local.remove(['offlinePendingPayload']);
+      checkOfflineQueueCard();
+
       updateProgress(100, 'Publishing completed successfully!');
 
       // Step 4: Update Metrics
@@ -487,6 +563,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (err) {
       console.error('[Contineo Error]:', err);
+
+      // Offline queue fallback
+      if (typeof validStudents !== 'undefined' && validStudents && validStudents.length > 0 && typeof payload !== 'undefined' && payload) {
+        await chrome.storage.local.set({
+          offlinePendingPayload: {
+            payload,
+            queuedAt: new Date().toISOString(),
+            studentCount: validStudents.length
+          }
+        });
+
+        updateProgress(100, 'Cloud offline: Cached locally in Chrome');
+        resultNotice.className = 'result-notice warning';
+        resultNotice.innerHTML = `
+          <strong>Cloud Offline - Queued Locally!</strong><br>
+          Extracted <strong>${validStudents.length} students</strong> safely.<br>
+          <span style="font-size: 11px;">Saved to offline queue. It will automatically upload to the cloud as soon as the server reconnects or finishes waking up.</span>
+        `;
+        resultNotice.classList.remove('hidden');
+
+        renderRecordsList(validStudents);
+        recordsContent.classList.remove('hidden');
+        accordionArrow.textContent = '▲';
+
+        checkOfflineQueueCard();
+
+        btnCollect.disabled = false;
+        btnActionText.textContent = 'QUEUED OFFLINE (RETRY)';
+        isProcessing = false;
+        return;
+      }
+
       updateProgress(100, 'Workflow stopped with errors');
       resultNotice.className = 'result-notice error';
       resultNotice.innerHTML = `

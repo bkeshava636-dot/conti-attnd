@@ -28,7 +28,7 @@ app.get('/fixture', (req, res) => {
 
 // Self-Hosted Extension Auto-Update Manifest (Option B)
 app.get('/updates.xml', (req, res) => {
-  const version = '1.3.0';
+  const version = '1.4.0';
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.get('host');
   const baseUrl = `${protocol}://${host}`;

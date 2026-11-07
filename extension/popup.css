@@ -375,10 +375,59 @@ body {
   color: #6ee7b7;
 }
 
+.result-notice.warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
 .result-notice.error {
   background-color: rgba(244, 63, 94, 0.1);
   border: 1px solid rgba(244, 63, 94, 0.3);
   color: #fda4af;
+}
+
+/* Offline Queue Card */
+.offline-queue-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  font-size: 11px;
+  color: #fcd34d;
+}
+
+.offline-queue-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.offline-queue-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #f59e0b;
+}
+
+.btn-xs-queue {
+  padding: 3px 9px;
+  background-color: #f59e0b;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-xs-queue:hover {
+  opacity: 0.9;
 }
 
 /* Records Accordion & Per-Course Attendance List */

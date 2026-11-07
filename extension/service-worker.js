@@ -89,6 +89,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       return;
     }
 
+    const backendUrl = config.backendUrl || 'https://contineo-attendance-tracker.onrender.com';
+    const proctorToken = config.proctorToken || 'demo-proctor-secret-key-bitm';
+
+    // Flush any pending offline queue first
+    await flushOfflineQueue(backendUrl, proctorToken);
+
     // Find any open Contineo tab
     const tabs = await chrome.tabs.query({});
     const targetTab = tabs.find(t => 
@@ -126,35 +132,47 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         }
       };
 
-      const backendUrl = config.backendUrl || 'https://contineo-attendance-tracker.onrender.com';
-      const proctorToken = config.proctorToken || 'demo-proctor-secret-key-bitm';
-
-      const res = await fetch(`${backendUrl}/api/attendance/publish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${proctorToken}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        const publishResult = await res.json();
-        console.log(`[Auto-Sync] Successfully synced ${validStudents.length} students at ${new Date().toLocaleTimeString()}`);
-        
-        // Record timestamp
-        await chrome.storage.local.set({
-          lastAutoSyncTimestamp: new Date().toISOString(),
-          lastSyncCount: validStudents.length
+      try {
+        const res = await fetch(`${backendUrl}/api/attendance/publish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${proctorToken}`
+          },
+          body: JSON.stringify(payload)
         });
 
-        // Show brief visual feedback on badge
-        await chrome.action.setBadgeText({ text: 'SYNC' });
-        await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
-        setTimeout(async () => {
-          await chrome.action.setBadgeText({ text: 'ON' });
-          await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
-        }, 5000);
+        if (res.ok) {
+          const publishResult = await res.json();
+          console.log(`[Auto-Sync] Successfully synced ${validStudents.length} students at ${new Date().toLocaleTimeString()}`);
+          
+          await chrome.storage.local.remove(['offlinePendingPayload']);
+          await chrome.storage.local.set({
+            lastAutoSyncTimestamp: new Date().toISOString(),
+            lastSyncCount: validStudents.length
+          });
+
+          // Show brief visual feedback on badge
+          await chrome.action.setBadgeText({ text: 'SYNC' });
+          await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
+          setTimeout(async () => {
+            await chrome.action.setBadgeText({ text: 'ON' });
+            await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
+          }, 5000);
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (netErr) {
+        console.warn('[Auto-Sync] Cloud offline, caching to offline queue:', netErr.message);
+        await chrome.storage.local.set({
+          offlinePendingPayload: {
+            payload,
+            queuedAt: new Date().toISOString(),
+            studentCount: validStudents.length
+          }
+        });
+        await chrome.action.setBadgeText({ text: 'WAIT' });
+        await chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
       }
     });
 
@@ -162,3 +180,35 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.error('[Auto-Sync Error]:', err);
   }
 });
+
+async function flushOfflineQueue(backendUrl, proctorToken) {
+  try {
+    const data = await chrome.storage.local.get(['offlinePendingPayload']);
+    if (!data.offlinePendingPayload || !data.offlinePendingPayload.payload) return;
+
+    const { payload, studentCount } = data.offlinePendingPayload;
+    console.log(`[Auto-Sync Worker] Attempting to flush offline queue (${studentCount} students)...`);
+
+    const res = await fetch(`${backendUrl}/api/attendance/publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${proctorToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      await chrome.storage.local.remove(['offlinePendingPayload']);
+      console.log(`[Auto-Sync Worker] Offline queue successfully uploaded to cloud.`);
+      await chrome.action.setBadgeText({ text: 'SYNC' });
+      await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
+      setTimeout(async () => {
+        await chrome.action.setBadgeText({ text: 'ON' });
+        await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
+      }, 5000);
+    }
+  } catch (err) {
+    console.warn('[Auto-Sync Worker] Offline flush deferred:', err.message);
+  }
+}
