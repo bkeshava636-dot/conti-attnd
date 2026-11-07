@@ -14,13 +14,6 @@ export default function LoginModal({ onLogin, error, onClose }) {
     setLoading(false);
   };
 
-  const sampleStudents = [
-    { usn: '3BR23CS001', name: 'A Vedha Shree', tag: 'Eligible (86.5%)', safe: true },
-    { usn: '3BR23CS002', name: 'Manideep M', tag: 'Eligible (88.7%)', safe: true },
-    { usn: '3BR23CS005', name: 'Bharath Kumar R', tag: 'Shortage (72.9%)', safe: false },
-    { usn: '3BR23CS012', name: 'Mohammed Rehan', tag: 'Shortage (71.9%)', safe: false },
-  ];
-
   return (
     <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="login-title">
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl relative">
@@ -80,7 +73,7 @@ export default function LoginModal({ onLogin, error, onClose }) {
           <button
             type="submit"
             disabled={loading || !usnInput.trim()}
-            className="w-full h-11 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 shadow-xs"
+            className="w-full h-11 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 shadow-xs cursor-pointer"
           >
             {loading ? (
               <>
@@ -95,33 +88,6 @@ export default function LoginModal({ onLogin, error, onClose }) {
             )}
           </button>
         </form>
-
-        {/* Quick Selection Sample Roster */}
-        <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">
-            Or select a sample BITM student:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {sampleStudents.map(st => (
-              <button
-                key={st.usn}
-                type="button"
-                onClick={() => {
-                  setUsnInput(st.usn);
-                  onLogin(st.usn);
-                }}
-                className="p-2.5 text-left bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-150 active:scale-[0.98]"
-              >
-                <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">{st.usn}</div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5">{st.name}</div>
-                <div className={`text-[10px] font-medium mt-1 inline-flex items-center gap-1 ${st.safe ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                  <span className={`size-1.5 rounded-full ${st.safe ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-rose-500 dark:bg-rose-400'}`} />
-                  {st.tag}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
 
       </div>
     </div>
