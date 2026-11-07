@@ -9,21 +9,21 @@
 <body>
   <div class="extension-container">
     
-    <!-- Top Header matching Web Portal Dark Theme -->
+    <!-- Top Minimal Header -->
     <header class="app-header">
       <div class="header-brand">
         <div class="brand-badge">BITM</div>
         <div>
           <div class="brand-title-wrap">
-            <span class="brand-title">Contineo Attendance</span>
-            <span class="brand-sims-tag">SIMS</span>
+            <span class="brand-title">Contineo Sync</span>
+            <span class="brand-sims-tag">v1.4</span>
           </div>
-          <p class="brand-subtitle">Ballari Institute of Tech &amp; Mgmt</p>
+          <p class="brand-subtitle">Department of CSE</p>
         </div>
       </div>
       <div class="header-actions">
         <button id="btn-theme-toggle" class="btn-icon" title="Toggle Light / Dark mode" aria-label="Toggle Light / Dark mode">
-          <svg id="icon-theme-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
+          <svg id="icon-theme-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
             <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -34,12 +34,12 @@
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
-          <svg id="icon-theme-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg id="icon-theme-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
         </button>
         <button id="btn-settings-toggle" class="btn-icon" title="Connection Settings" aria-label="Connection Settings">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
@@ -47,36 +47,40 @@
       </div>
     </header>
 
-    <!-- Status Overview Strip -->
-    <div class="status-strip">
-      <div class="status-item">
-        <span class="status-dot" id="dot-portal"></span>
-        <span class="status-label">Portal:</span>
-        <strong id="status-portal" class="status-val">Detecting...</strong>
+    <!-- Unified Minimal Status & Detection Card -->
+    <div class="detection-card">
+      <div class="status-strip">
+        <div class="status-item">
+          <span class="status-dot" id="dot-portal"></span>
+          <span class="status-label">Portal:</span>
+          <strong id="status-portal" class="status-val">Detecting...</strong>
+        </div>
+        <div class="status-item">
+          <span class="status-dot" id="dot-backend"></span>
+          <span class="status-label">Cloud:</span>
+          <strong id="status-backend" class="status-val">Connecting...</strong>
+        </div>
       </div>
-      <div class="status-item">
-        <span class="status-dot" id="dot-backend"></span>
-        <span class="status-label">Cloud:</span>
-        <strong id="status-backend" class="status-val">Connecting...</strong>
+
+      <div class="detection-info">
+        <div class="detection-text-col">
+          <span class="detection-label">Active Contineo Roster</span>
+          <span class="detection-detail" id="detection-detail-text">Scanning active tab...</span>
+        </div>
+        <div class="detection-badge-wrap">
+          <span class="detection-count font-mono" id="count-detected">0</span>
+          <span class="detection-unit">students</span>
+        </div>
       </div>
     </div>
 
-    <!-- Offline Queue Status Card -->
+    <!-- Offline Queue Banner (Only shown when pending items exist) -->
     <div id="offline-queue-card" class="offline-queue-card hidden">
       <div class="offline-queue-info">
         <span class="offline-queue-dot"></span>
         <span id="offline-queue-text">1 batch queued offline</span>
       </div>
       <button id="btn-sync-offline-queue" class="btn-xs-queue" type="button">Upload Now</button>
-    </div>
-
-    <!-- Active Detection Card -->
-    <div class="detection-card">
-      <div class="detection-info">
-        <span class="detection-label">Students Detected</span>
-        <span class="detection-count font-mono" id="count-detected">0</span>
-      </div>
-      <div class="detection-detail" id="detection-detail-text">Scanning active browser tab...</div>
     </div>
 
     <!-- Primary Action Button -->
@@ -86,53 +90,46 @@
       </button>
     </div>
 
-    <!-- Auto-Sync Background Scheduler -->
+    <!-- Minimal Auto-Sync Strip -->
     <div class="autosync-card">
-      <div class="autosync-row-top">
-        <div class="autosync-title-wrap">
-          <svg class="autosync-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
-          <span class="autosync-title">Auto-Sync</span>
-        </div>
+      <div class="autosync-left">
         <label class="switch" title="Toggle periodic auto-sync in background">
           <input type="checkbox" id="toggle-autosync">
           <span class="slider round"></span>
         </label>
+        <div class="autosync-title-wrap">
+          <span class="autosync-title">Auto-Sync</span>
+          <span class="autosync-status" id="autosync-status-badge">Off</span>
+        </div>
       </div>
-      <div class="autosync-row-bottom">
-        <label for="select-sync-interval" class="autosync-label">Interval:</label>
-        <select id="select-sync-interval" class="autosync-select">
-          <option value="15">Every 15 mins</option>
-          <option value="30" selected>Every 30 mins</option>
-          <option value="60">Every 1 hour</option>
-          <option value="120">Every 2 hours</option>
-          <option value="240">Every 4 hours</option>
+      <div class="autosync-right">
+        <select id="select-sync-interval" class="autosync-select" title="Auto-sync interval">
+          <option value="15">15 min</option>
+          <option value="30" selected>30 min</option>
+          <option value="60">1 hour</option>
+          <option value="120">2 hours</option>
+          <option value="240">4 hours</option>
         </select>
-        <span class="autosync-status" id="autosync-status-badge">Off</span>
-      </div>
-      <div class="autosync-info" id="autosync-info-text">
-        Periodically syncs open Contineo tabs in background.
       </div>
     </div>
+    <div class="autosync-subtext" id="autosync-info-text">
+      Periodically syncs open Contineo tabs in background.
+    </div>
 
-    <!-- How Detection Works Helper (Shown when not on Contineo) -->
+    <!-- Non-Contineo Helper Box -->
     <div id="detection-helper" class="helper-box">
-      <div class="helper-title">How it connects to Contineo:</div>
+      <div class="helper-title">To sync live student attendance:</div>
       <ol class="helper-steps">
-        <li>Open <strong>bitm.contineo.in</strong> in your browser (on campus/VPN).</li>
-        <li>Log in as Proctor and navigate to the <strong>Student Attendance / Counselling</strong> page.</li>
-        <li>Click this extension, it will instantly detect the student roster!</li>
+        <li>Open <strong>bitm.contineo.in</strong> in Chrome.</li>
+        <li>Log in as Proctor and open the <strong>Student Attendance</strong> page.</li>
+        <li>Open this extension and click <strong>Sync Attendance</strong>.</li>
       </ol>
       <div class="helper-alt">
-        <span>Testing without campus network?</span>
-        <a href="#" id="link-helper-fixture">Open demo fixture simulator</a>
+        <a href="#" id="link-helper-fixture">Open simulator test fixture</a>
       </div>
     </div>
 
-    <!-- Collection Progress Section -->
+    <!-- Progress Indicator -->
     <div id="progress-container" class="progress-container hidden">
       <div class="progress-header">
         <span class="progress-label" id="progress-stage-label">Extracting student tables...</span>
@@ -143,8 +140,11 @@
       </div>
     </div>
 
-    <!-- Real-time Metrics Grid -->
-    <div class="metrics-grid">
+    <!-- Result Notice Box -->
+    <div id="result-notice" class="result-notice hidden"></div>
+
+    <!-- Compact Metrics Grid (hidden by default until sync completes) -->
+    <div class="metrics-grid hidden">
       <div class="metric-box">
         <div class="metric-title">Processed</div>
         <div class="metric-value font-mono" id="val-processed">0/0</div>
@@ -163,23 +163,20 @@
       </div>
     </div>
 
-    <!-- Result Notice Box -->
-    <div id="result-notice" class="result-notice hidden"></div>
-
-    <!-- Extracted Students List (Collapsible with Per-Course Breakdown) -->
+    <!-- Extracted Students List Accordion -->
     <div class="records-accordion">
-      <button id="btn-toggle-records" class="accordion-header">
+      <button id="btn-toggle-records" class="accordion-header" type="button">
         <div class="accordion-header-left">
-          <span>Student Course Attendance</span>
-          <span class="bitm-cutoff-tag">BITM Min: 85%</span>
+          <span>Extracted Student List</span>
+          <span class="bitm-cutoff-tag">BITM 85% Cutoff</span>
         </div>
         <span id="accordion-arrow">▼</span>
       </button>
       <div id="records-content" class="accordion-content hidden">
         <div class="course-filter-bar">
-          <button class="filter-chip active" id="filter-chip-all" data-filter="ALL">All (<span id="count-chip-all">0</span>)</button>
-          <button class="filter-chip chip-shortage" id="filter-chip-shortage" data-filter="SHORTAGE">&lt;85% Shortage (<span id="count-chip-shortage">0</span>)</button>
-          <button class="filter-chip chip-safe" id="filter-chip-safe" data-filter="SAFE">≥85% Eligible (<span id="count-chip-safe">0</span>)</button>
+          <button class="filter-chip active" id="filter-chip-all" data-filter="ALL" type="button">All (<span id="count-chip-all">0</span>)</button>
+          <button class="filter-chip chip-shortage" id="filter-chip-shortage" data-filter="SHORTAGE" type="button">&lt;85% Shortage (<span id="count-chip-shortage">0</span>)</button>
+          <button class="filter-chip chip-safe" id="filter-chip-safe" data-filter="SAFE" type="button">Safe (<span id="count-chip-safe">0</span>)</button>
         </div>
         <div id="records-list" class="records-list">
           <p class="empty-state">No attendance collected yet. Click the sync button above.</p>
@@ -187,10 +184,10 @@
       </div>
     </div>
 
-    <!-- Footer Links -->
+    <!-- Compact Footer -->
     <footer class="app-footer">
       <a href="https://contineo-attendance-tracker.onrender.com" target="_blank" class="footer-link">
-        Open Student Web Portal ↗
+        Open Web Portal ↗
       </a>
       <a href="https://bitm.contineo.in" target="_blank" class="footer-link-secondary">
         bitm.contineo.in ↗
@@ -201,19 +198,19 @@
     <div id="settings-modal" class="settings-modal hidden">
       <div class="settings-card">
         <div class="settings-header">
-          <h3>Connection settings</h3>
-          <button id="btn-close-settings" class="btn-icon">✕</button>
+          <h3>Connection Settings</h3>
+          <button id="btn-close-settings" class="btn-icon" type="button">✕</button>
         </div>
         <div class="form-group">
-          <label for="input-backend-url">Cloud Server URL:</label>
+          <label for="input-backend-url">Cloud Server URL</label>
           <input type="text" id="input-backend-url" placeholder="https://contineo-attendance-tracker.onrender.com" />
         </div>
         <div class="form-group">
-          <label for="input-proctor-token">Proctor Security Passkey:</label>
+          <label for="input-proctor-token">Proctor Security Passkey</label>
           <input type="password" id="input-proctor-token" placeholder="Passkey" />
         </div>
         <div class="settings-actions">
-          <button id="btn-save-settings" class="btn-save">Save &amp; reconnect</button>
+          <button id="btn-save-settings" class="btn-save" type="button">Save Settings</button>
         </div>
       </div>
     </div>

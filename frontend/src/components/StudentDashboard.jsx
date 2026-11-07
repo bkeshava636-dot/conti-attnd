@@ -10,10 +10,11 @@ import {
   Copy, 
   Check,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
 
-export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }) {
+export default function StudentDashboard({ data, onRefresh, onNotify, darkMode, onLogout }) {
   const [filter, setFilter] = useState('ALL'); // 'ALL' | 'SHORTAGE' | 'SAFE'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('LOWEST'); // 'LOWEST' | 'HIGHEST' | 'CODE' | 'NAME'
@@ -156,6 +157,20 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                   <Clock className="size-3.5 text-slate-400" aria-hidden="true" />
                   Synced: {student.updated_at ? new Date(student.updated_at).toLocaleString() : 'Recently'}
                 </span>
+                {onLogout && (
+                  <>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={onLogout}
+                      className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 font-medium transition-colors"
+                      title="Log out and enter another USN"
+                    >
+                      <LogOut className="size-3 text-rose-500" aria-hidden="true" />
+                      <span>Log out</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

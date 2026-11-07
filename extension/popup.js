@@ -516,6 +516,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateProgress(100, 'Publishing completed successfully!');
 
       // Step 4: Update Metrics
+      const metricsGrid = document.querySelector('.metrics-grid');
+      if (metricsGrid) metricsGrid.classList.remove('hidden');
+
       valProcessed.textContent = `${publishResult.totalProcessed}/${publishResult.totalProcessed}`;
       valSuccessful.textContent = publishResult.successfulRecords;
       valDuplicates.textContent = publishResult.duplicatesHandled || 0;

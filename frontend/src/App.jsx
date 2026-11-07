@@ -113,6 +113,15 @@ export default function App() {
     }
   }
 
+  const handleLogoutStudent = () => {
+    localStorage.removeItem('student_usn');
+    setCurrentUSN('');
+    setStudentData(null);
+    setLoginError(null);
+    setShowStudentLoginModal(true);
+    showNotification('Logged out successfully', 'info');
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     if (currentUSN) {
@@ -164,13 +173,7 @@ export default function App() {
           }
         }}
         currentStudent={studentData?.student}
-        onLogoutStudent={() => {
-          localStorage.removeItem('student_usn');
-          setCurrentUSN('');
-          setStudentData(null);
-          setLoginError(null);
-          setShowStudentLoginModal(true);
-        }}
+        onLogoutStudent={handleLogoutStudent}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         isProctorAuthenticated={Boolean(proctorToken)}
@@ -193,6 +196,7 @@ export default function App() {
               onRefresh={handleRefresh} 
               onNotify={showNotification}
               darkMode={darkMode}
+              onLogout={handleLogoutStudent}
             />
           ) : (
             <div className="py-20 text-center max-w-md mx-auto space-y-4 animate-in fade-in duration-300">

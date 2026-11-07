@@ -113,7 +113,21 @@ export default function Navbar({
             <RotateCw className={`size-3.5 ${isRefreshing ? 'animate-spin text-slate-900 dark:text-white' : ''}`} aria-hidden="true" />
           </button>
 
-          {/* Student Profile Switcher */}
+          {/* Mobile Student Logout Button */}
+          {currentStudent && currentView === 'student' && (
+            <button
+              type="button"
+              onClick={onLogoutStudent}
+              className="flex sm:hidden items-center gap-1.5 h-9 px-2.5 rounded-lg text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/60 transition-all duration-150 active:scale-[0.98]"
+              title="Log out student"
+              aria-label="Log out student"
+            >
+              <LogOut className="size-3.5" aria-hidden="true" />
+              <span>Logout</span>
+            </button>
+          )}
+
+          {/* Desktop Student Profile Switcher */}
           {currentStudent && currentView === 'student' && (
             <div className="hidden sm:flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-3">
               <div className="text-right">
@@ -123,9 +137,10 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={onLogoutStudent}
-                className="h-8 px-2.5 rounded-md text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs transition-all duration-150 active:scale-[0.98]"
+                className="flex items-center gap-1 h-8 px-2.5 rounded-md text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs transition-all duration-150 active:scale-[0.98]"
               >
-                Change student
+                <LogOut className="size-3 text-slate-400" aria-hidden="true" />
+                <span>Logout</span>
               </button>
             </div>
           )}
