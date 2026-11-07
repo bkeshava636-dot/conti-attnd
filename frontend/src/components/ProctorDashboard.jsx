@@ -6,10 +6,10 @@ import {
   Search, 
   CheckCircle2, 
   AlertTriangle, 
-  AlertOctagon, 
   ExternalLink,
   Eye,
-  RefreshCw
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 
 export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequireAuth, onNotify }) {
@@ -17,7 +17,7 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'SAFE' | 'SHORTAGE'
   const [activeTab, setActiveTab] = useState('roster'); // 'roster' | 'imports'
 
   useEffect(() => {
@@ -64,54 +64,30 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
     const matchesSearch = st.name.toLowerCase().includes(search.toLowerCase()) || 
                           st.usn.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
-    if (statusFilter === 'CRITICAL') return st.overall_percentage < 75;
-    if (statusFilter === 'WARNING') return st.overall_percentage >= 75 && st.overall_percentage < 85;
-    if (statusFilter === 'GOOD') return st.overall_percentage >= 85;
+    if (statusFilter === 'SAFE') return st.all_courses_safe;
+    if (statusFilter === 'SHORTAGE') return !st.all_courses_safe;
     return true;
   });
 
-  const batchAvg = roster.length > 0
-    ? Math.round((roster.reduce((sum, s) => sum + s.overall_percentage, 0) / roster.length) * 10) / 10
-    : 0;
-
-  const criticalCount = roster.filter(s => s.overall_percentage < 75).length;
-  const goodCount = roster.filter(s => s.overall_percentage >= 85).length;
+  const allSafeCount = roster.filter(s => s.all_courses_safe).length;
+  const shortageCount = roster.filter(s => !s.all_courses_safe).length;
 
   const exportCSV = () => {
-    const headers = "USN,Name,Semester,Overall_Attendance,Status\n";
-    const rows = roster.map(s => `"${s.usn}","${s.name}","${s.semester}",${s.overall_percentage}%,${s.status}`).join('\n');
+    const headers = "USN,Name,Semester,Course_Standing,Shortage_Courses_Count,Shortage_Subjects_List\n";
+    const rows = roster.map(s => {
+      const shortageList = (s.shortage_subjects || [])
+        .map(sub => `${sub.course_code}: ${sub.percentage}%`)
+        .join('; ');
+      return `"${s.usn}","${s.name}","${s.semester}","${s.all_courses_safe ? 'ALL_SAFE' : 'HAS_SHORTAGE'}",${s.shortage_count || 0},"${shortageList || 'None'}"`;
+    }).join('\n');
+
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `BITM_Attendance_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `BITM_Course_Attendance_Report_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    onNotify?.('Exported cohort roster to CSV');
-  };
-
-  const getStatusBadge = (pct) => {
-    if (pct >= 85) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
-          <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 ring-2 ring-emerald-500/20" aria-hidden="true" />
-          Safe (85%+)
-        </span>
-      );
-    }
-    if (pct >= 75) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70">
-          <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400 ring-2 ring-amber-500/20" aria-hidden="true" />
-          Eligible (75-84%)
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70">
-        <span className="size-1.5 rounded-full bg-rose-600 dark:bg-rose-400 ring-2 ring-rose-500/20" aria-hidden="true" />
-        Shortage (&lt;75%)
-      </span>
-    );
+    onNotify?.('Exported course attendance roster to CSV');
   };
 
   return (
@@ -130,7 +106,7 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
             Proctor Administration Ledger
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Ballari Institute of Technology &amp; Management • Department of Computer Science &amp; Engineering
+            Ballari Institute of Technology &amp; Management • Per-Course 85% Attendance Compliance
           </p>
         </div>
 
@@ -156,7 +132,7 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
         </div>
       </section>
 
-      {/* Aggregate Metric Cards */}
+      {/* Aggregate Metric Cards (Per-Course Focused) */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Cohort statistics">
         
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
@@ -170,31 +146,31 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-xs mb-1.5">
-            <span>Batch average</span>
-            <CheckCircle2 className="size-4 text-slate-400" aria-hidden="true" />
-          </div>
-          <div className="text-2xl font-semibold text-slate-900 dark:text-white font-mono tabular-nums">{batchAvg}%</div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Cohort mean attendance</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
-          <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-xs mb-1.5">
-            <span>Safe standing (85%+)</span>
+            <span>All courses safe (85%+)</span>
             <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
           </div>
-          <div className="text-2xl font-semibold text-emerald-700 dark:text-emerald-400 font-mono tabular-nums">{goodCount}</div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Exam eligible without condonation</div>
+          <div className="text-2xl font-semibold text-emerald-700 dark:text-emerald-400 font-mono tabular-nums">{allSafeCount}</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Zero shortage across all subjects</div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-xs mb-1.5">
-            <span>Attendance shortage (&lt;75%)</span>
-            <AlertOctagon className="size-4 text-rose-600 dark:text-rose-400" aria-hidden="true" />
+            <span>Students with shortage</span>
+            <AlertCircle className={`size-4 ${shortageCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`} aria-hidden="true" />
           </div>
-          <div className={`text-2xl font-semibold font-mono tabular-nums ${criticalCount > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-slate-400'}`}>
-            {criticalCount}
+          <div className={`text-2xl font-semibold font-mono tabular-nums ${shortageCount > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-slate-400'}`}>
+            {shortageCount}
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Counselling review advised</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">At least 1 course &lt;85%</div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
+          <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-xs mb-1.5">
+            <span>Evaluation rule</span>
+            <ShieldCheck className="size-4 text-slate-400" aria-hidden="true" />
+          </div>
+          <div className="text-2xl font-semibold text-slate-900 dark:text-white">85% Minimum</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Mandatory per individual course</div>
         </div>
 
       </section>
@@ -254,9 +230,8 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 w-full sm:w-auto" role="group" aria-label="Roster filters">
               {[
                 { id: 'ALL', label: `All (${roster.length})` },
-                { id: 'GOOD', label: '85%+' },
-                { id: 'WARNING', label: '75% to 84%' },
-                { id: 'CRITICAL', label: '<75%' }
+                { id: 'SAFE', label: `All Safe (${allSafeCount})` },
+                { id: 'SHORTAGE', label: `Has Shortage (${shortageCount})` }
               ].map(st => (
                 <button
                   key={st.id}
@@ -274,7 +249,7 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
             </div>
           </div>
 
-          {/* Roster Table */}
+          {/* Roster Table (Per-Course Standing) */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
@@ -282,8 +257,8 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
                   <th scope="col" className="py-3 px-4">USN</th>
                   <th scope="col" className="py-3 px-4">Student name</th>
                   <th scope="col" className="py-3 px-4">Semester</th>
-                  <th scope="col" className="py-3 px-4">Attendance %</th>
-                  <th scope="col" className="py-3 px-4">Status</th>
+                  <th scope="col" className="py-3 px-4">Course Standing</th>
+                  <th scope="col" className="py-3 px-4">Shortage Subjects (&lt;85%)</th>
                   <th scope="col" className="py-3 px-4 text-right">Dossier</th>
                 </tr>
               </thead>
@@ -293,16 +268,35 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
                     <td className="py-3.5 px-4 font-mono font-semibold text-slate-800 dark:text-slate-200">{st.usn}</td>
                     <td className="py-3.5 px-4 text-slate-900 dark:text-white font-medium">{st.name}</td>
                     <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono">{st.semester}</td>
-                    <td className="py-3.5 px-4 font-semibold text-sm font-mono tabular-nums">
-                      <span className={
-                        st.overall_percentage >= 85 ? 'text-emerald-700 dark:text-emerald-400' :
-                        st.overall_percentage >= 75 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
-                      }>
-                        {st.overall_percentage}%
-                      </span>
+                    <td className="py-3.5 px-4">
+                      {st.all_courses_safe ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
+                          <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                          <span>All Courses Safe</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70">
+                          <AlertTriangle className="size-3 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
+                          <span>Shortage in {st.shortage_count || (st.shortage_subjects ? st.shortage_subjects.length : 1)} {st.shortage_count === 1 ? 'course' : 'courses'}</span>
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
-                      {getStatusBadge(st.overall_percentage)}
+                      {st.all_courses_safe ? (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">None (All &ge;85%)</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5 max-w-sm">
+                          {(st.shortage_subjects || []).map((sub, i) => (
+                            <span 
+                              key={i} 
+                              className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-100/70 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70"
+                            >
+                              <span>{sub.course_code}:</span>
+                              <span className="tabular-nums">{sub.percentage}%</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button

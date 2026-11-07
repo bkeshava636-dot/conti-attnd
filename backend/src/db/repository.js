@@ -297,6 +297,8 @@ class DataRepository {
           updated_at: item.updated_at
         }));
 
+        const shortageCount = subjects.filter(s => s.attendance_percentage < 85).length;
+        const allSafe = subjects.length > 0 && shortageCount === 0;
         const overall = subjects.length > 0
           ? Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10
           : 0;
@@ -311,8 +313,10 @@ class DataRepository {
             updated_at: student.updated_at
           },
           overall_percentage: overall,
-          overall_status: getAttendanceStatus(overall),
-          critical_subjects_count: subjects.filter(s => s.attendance_percentage < 75).length,
+          total_subjects: subjects.length,
+          shortage_subjects_count: shortageCount,
+          critical_subjects_count: shortageCount, // Alias for shortage (<85%)
+          all_courses_safe: allSafe,
           subjects
         };
       } catch (err) {
@@ -338,6 +342,8 @@ class DataRepository {
       }))
       .sort((a, b) => a.course_code.localeCompare(b.course_code));
 
+    const shortageCount = subjects.filter(s => s.attendance_percentage < 85).length;
+    const allSafe = subjects.length > 0 && shortageCount === 0;
     const overall = subjects.length > 0
       ? Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10
       : 0;
@@ -345,8 +351,10 @@ class DataRepository {
     return {
       student,
       overall_percentage: overall,
-      overall_status: getAttendanceStatus(overall),
-      critical_subjects_count: subjects.filter(s => s.attendance_percentage < 75).length,
+      total_subjects: subjects.length,
+      shortage_subjects_count: shortageCount,
+      critical_subjects_count: shortageCount,
+      all_courses_safe: allSafe,
       subjects
     };
   }
@@ -361,23 +369,33 @@ class DataRepository {
           .from('students')
           .select(`
             id, usn, name, semester, department, updated_at,
-            attendance ( attendance_percentage )
+            attendance ( 
+              attendance_percentage,
+              subjects ( course_code )
+            )
           `);
 
         if (students) {
           return students.map(s => {
             const atts = s.attendance || [];
-            const avg = atts.length > 0
-              ? Math.round((atts.reduce((acc, a) => acc + parseFloat(a.attendance_percentage), 0) / atts.length) * 10) / 10
-              : 0;
+            const shortageSubjects = atts
+              .filter(a => parseFloat(a.attendance_percentage) < 85)
+              .map(a => ({
+                course_code: a.subjects?.course_code || 'N/A',
+                percentage: parseFloat(a.attendance_percentage)
+              }));
+            const allSafe = atts.length > 0 && shortageSubjects.length === 0;
+
             return {
               usn: s.usn,
               name: s.name,
               semester: s.semester,
               department: s.department,
-              overall_percentage: avg,
-              status: getAttendanceStatus(avg),
               total_subjects: atts.length,
+              shortage_count: shortageSubjects.length,
+              shortage_subjects: shortageSubjects,
+              all_courses_safe: allSafe,
+              status: allSafe ? 'SAFE' : 'SHORTAGE',
               last_updated: s.updated_at
             };
           });
@@ -390,18 +408,24 @@ class DataRepository {
     const store = this.getLocalData();
     return Object.values(store.students).map(s => {
       const studentAtts = Object.values(store.attendance).filter(a => a.usn === s.usn);
-      const avg = studentAtts.length > 0
-        ? Math.round((studentAtts.reduce((acc, a) => acc + a.attendance_percentage, 0) / studentAtts.length) * 10) / 10
-        : 0;
+      const shortageSubjects = studentAtts
+        .filter(a => parseFloat(a.attendance_percentage) < 85)
+        .map(a => ({
+          course_code: a.course_code,
+          percentage: parseFloat(a.attendance_percentage)
+        }));
+      const allSafe = studentAtts.length > 0 && shortageSubjects.length === 0;
 
       return {
         usn: s.usn,
         name: s.name,
         semester: s.semester,
         department: s.department,
-        overall_percentage: avg,
-        status: getAttendanceStatus(avg),
         total_subjects: studentAtts.length,
+        shortage_count: shortageSubjects.length,
+        shortage_subjects: shortageSubjects,
+        all_courses_safe: allSafe,
+        status: allSafe ? 'SAFE' : 'SHORTAGE',
         last_updated: s.updated_at
       };
     });

@@ -5,34 +5,38 @@ import {
   BookOpen, 
   Clock, 
   Building2,
-  Search,
-  ArrowUpDown,
-  Copy,
-  Check
+  Search, 
+  ArrowUpDown, 
+  Copy, 
+  Check,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
-import ShortageCalculator from './ShortageCalculator';
 
 export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }) {
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('ALL'); // 'ALL' | 'SHORTAGE' | 'SAFE'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('LOWEST'); // 'LOWEST' | 'HIGHEST' | 'CODE' | 'NAME'
   const [copiedUSN, setCopiedUSN] = useState(false);
 
   const student = data?.student;
-  const overall_percentage = data?.overall_percentage || 0;
-  const overall_status = data?.overall_status || 'GOOD';
-  const critical_subjects_count = data?.critical_subjects_count || 0;
   const subjects = data?.subjects || [];
+
+  // Shortage calculation: in BITM, any course < 85% is in shortage
+  const shortageSubjects = useMemo(() => subjects.filter(s => Number(s.attendance_percentage) < 85), [subjects]);
+  const safeSubjects = useMemo(() => subjects.filter(s => Number(s.attendance_percentage) >= 85), [subjects]);
+  const shortageCount = shortageSubjects.length;
+  const allCoursesSafe = subjects.length > 0 && shortageCount === 0;
 
   // Filter & Sort courses (unconditional hook)
   const processedSubjects = useMemo(() => {
     if (!subjects.length) return [];
     return subjects
       .filter(sub => {
+        const pct = Number(sub.attendance_percentage) || 0;
         // Status filter
-        if (filter === 'CRITICAL' && sub.attendance_percentage >= 75) return false;
-        if (filter === 'WARNING' && (sub.attendance_percentage < 75 || sub.attendance_percentage >= 85)) return false;
-        if (filter === 'GOOD' && sub.attendance_percentage < 85) return false;
+        if (filter === 'SHORTAGE' && pct >= 85) return false;
+        if (filter === 'SAFE' && pct < 85) return false;
 
         // Search query
         if (searchQuery.trim()) {
@@ -72,11 +76,11 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
     ? student.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('')
     : 'ST';
 
-  // Status Badge with Status Dot (High-Contrast in Light & Dark modes)
+  // Status Badge with High-Contrast Colors
   const getStatusBadge = (pct) => {
     if (pct >= 85) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
           <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 ring-2 ring-emerald-500/20" aria-hidden="true" />
           Safe (85%+)
         </span>
@@ -84,16 +88,16 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
     }
     if (pct >= 75) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70">
           <span className="size-1.5 rounded-full bg-amber-600 dark:bg-amber-400 ring-2 ring-amber-500/20" aria-hidden="true" />
-          Condonation (75-84%)
+          Shortage (75-84%)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70">
         <span className="size-1.5 rounded-full bg-rose-600 dark:bg-rose-400 ring-2 ring-rose-500/20" aria-hidden="true" />
-        Shortage (&lt;75%)
+        Critical Shortage (&lt;75%)
       </span>
     );
   };
@@ -104,44 +108,10 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
     return 'bg-rose-500 dark:bg-rose-400';
   };
 
-  // Quick Counter: Classes Needed to Reach BITM 85% Cutoff
-  const calculateRecovery = (sub) => {
-    const pct = Number(sub.attendance_percentage) || 0;
-    const total = sub.total_classes || 40;
-    const attended = sub.attended_classes !== undefined 
-      ? Number(sub.attended_classes) 
-      : Math.round((pct / 100) * total);
-
-    if (pct < 85) {
-      // Classes needed: (attended + x) / (total + x) >= 0.85
-      const needed = Math.max(1, Math.ceil((0.85 * total - attended) / 0.15));
-      return {
-        type: 'SHORTAGE',
-        needed,
-        pillText: `Need +${needed} ${needed === 1 ? 'class' : 'classes'} to reach 85%`,
-        badgeText: `+${needed} for 85%`
-      };
-    } else {
-      const canMiss = Math.max(0, Math.floor((attended - 0.85 * total) / 0.85));
-      return {
-        type: 'SAFE',
-        canMiss,
-        pillText: canMiss > 0 ? `Can miss ${canMiss} ${canMiss === 1 ? 'class' : 'classes'} safely` : 'At 85% exact cutoff',
-        badgeText: canMiss > 0 ? `${canMiss} safe margin` : 'At cutoff'
-      };
-    }
-  };
-
-  // Radial Progress Ring parameters
-  const strokeWidth = 8;
-  const radius = 42;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (overall_percentage / 100) * circumference;
-
   return (
     <div className="space-y-6 pb-12">
       
-      {/* Student Dossier Header Banner with Radial Gauge */}
+      {/* Student Dossier Header Banner (Per-Course Focused, No Overall %) */}
       <section className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs transition-colors">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           
@@ -190,53 +160,31 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
             </div>
           </div>
 
-          {/* Radial Progress Ring & Standing */}
-          <div className="flex items-center gap-5 bg-slate-50/80 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 self-start md:self-auto shrink-0 transition-colors">
-            {/* SVG Radial Gauge */}
-            <div className="relative size-24 shrink-0 flex items-center justify-center">
-              <svg className="size-24 transform -rotate-90" aria-hidden="true">
-                <circle
-                  cx="48"
-                  cy="48"
-                  r={radius}
-                  stroke={darkMode ? '#1e293b' : '#e2e8f0'}
-                  strokeWidth={strokeWidth}
-                  fill="transparent"
-                />
-                <circle
-                  cx="48"
-                  cy="48"
-                  r={radius}
-                  stroke={overall_percentage >= 85 ? '#10b981' : overall_percentage >= 75 ? '#f59e0b' : '#f43f5e'}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  fill="transparent"
-                  className="transition-all duration-700 ease-out"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-xl font-bold font-mono tabular-nums text-slate-900 dark:text-white leading-none">
-                  {overall_percentage}%
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
-                  Overall
-                </span>
-              </div>
+          {/* Per-Course Standing Card (Replaces Overall %) */}
+          <div className="flex items-center gap-4 bg-slate-50/80 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 self-start md:self-auto shrink-0 transition-colors">
+            <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${
+              allCoursesSafe 
+                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400' 
+                : 'bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400'
+            }`}>
+              {allCoursesSafe ? (
+                <ShieldCheck className="size-6" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="size-6" aria-hidden="true" />
+              )}
             </div>
 
-            <div className="space-y-1">
-              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                VTU exam standing
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Course Status
               </div>
-              <div>{getStatusBadge(overall_percentage)}</div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 pt-0.5 max-w-[140px] text-pretty">
-                {overall_percentage >= 85 
-                  ? 'Exam eligible without condonation fee' 
-                  : overall_percentage >= 75 
-                    ? 'Eligible with principal condonation' 
-                    : 'Detention risk: immediate recovery needed'}
+              <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                {allCoursesSafe ? 'All Courses Safe' : `Shortage in ${shortageCount} ${shortageCount === 1 ? 'Course' : 'Courses'}`}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-[200px]">
+                {allCoursesSafe 
+                  ? 'All registered subjects are at 85% or above' 
+                  : 'Requires attendance improvement below 85%'}
               </p>
             </div>
           </div>
@@ -244,70 +192,67 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
         </div>
       </section>
 
-      {/* 4 Metric Cards Strip with Linear/Apple subtle borders */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Attendance statistics">
+      {/* 4 Metric Cards Strip (Per-Course Focused) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Course statistics">
         
-        {/* Metric 1 */}
+        {/* Metric 1: Course Standing */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
-            <span>Overall aggregate</span>
-            <span className="font-semibold text-slate-900 dark:text-white font-mono tabular-nums">{overall_percentage}%</span>
+            <span>Course standing</span>
+            <ShieldCheck className="size-4 text-slate-400" aria-hidden="true" />
           </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-            <div className={`h-full ${getBarColor(overall_percentage)}`} style={{ width: `${overall_percentage}%` }} />
+          <div className={`text-2xl font-bold font-mono tabular-nums ${allCoursesSafe ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+            {allCoursesSafe ? 'All Safe' : `${shortageCount} Alert`}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-pretty">BITM Minimum: 85% per course</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">BITM rule: 85% per individual course</p>
         </div>
 
-        {/* Metric 2 */}
+        {/* Metric 2: Shortage Courses */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
-            <span>Shortage courses</span>
-            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+            <span>Shortage courses (&lt;85%)</span>
+            <AlertTriangle className={`size-4 ${shortageCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`} aria-hidden="true" />
           </div>
-          <div className={`text-2xl font-bold font-mono tabular-nums ${critical_subjects_count > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-            {critical_subjects_count} {critical_subjects_count === 1 ? 'course' : 'courses'}
+          <div className={`text-2xl font-bold font-mono tabular-nums ${shortageCount > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+            {shortageCount} {shortageCount === 1 ? 'course' : 'courses'}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-pretty">
-            {critical_subjects_count === 0 ? 'All courses meet BITM 85% minimum' : 'Requires immediate attendance correction'}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {shortageCount === 0 ? 'All courses satisfy 85% minimum' : 'Below 85% attendance requirement'}
           </p>
         </div>
 
-        {/* Metric 3 */}
+        {/* Metric 3: Safe Courses */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
-            <span>Registered courses</span>
-            <BookOpen className="size-4 text-slate-400" aria-hidden="true" />
+            <span>Safe courses (85%+)</span>
+            <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
           </div>
           <div className="text-2xl font-bold text-slate-900 dark:text-white font-mono tabular-nums">
-            {subjects.length} courses
+            {safeSubjects.length} of {subjects.length}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-pretty">Theory, lab, and skill development</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Exam eligible subjects</p>
         </div>
 
-        {/* Metric 4 */}
+        {/* Metric 4: Source System */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
             <span>Source system</span>
             <Building2 className="size-4 text-slate-400" aria-hidden="true" />
           </div>
           <div className="text-2xl font-bold text-slate-900 dark:text-white">Contineo SIMS</div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-pretty">Synchronized via proctor login</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Live synchronized portal data</p>
         </div>
 
       </section>
 
-      {/* Attendance Forecast & What-If Planner */}
-      <ShortageCalculator overallPercentage={overall_percentage} subjects={subjects} darkMode={darkMode} />
-
-      {/* Course Breakdown Section with Instant Search & Sorting */}
+      {/* Course Breakdown Section */}
       <section className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors">
         
         {/* Table Controls Bar */}
         <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">Course-wise attendance records</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Continuous evaluation and lecture participation records</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Subject attendance percentages with 85% minimum cutoff</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -353,36 +298,25 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
               </button>
               <button
                 type="button"
-                onClick={() => setFilter('CRITICAL')}
+                onClick={() => setFilter('SHORTAGE')}
                 className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all duration-150 active:scale-[0.98] ${
-                  filter === 'CRITICAL' 
+                  filter === 'SHORTAGE' 
                     ? 'bg-white dark:bg-rose-950 text-rose-800 dark:text-rose-300 shadow-xs border border-rose-200 dark:border-rose-800' 
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Shortage (&lt;75%)
+                Shortage &lt;85% ({shortageCount})
               </button>
               <button
                 type="button"
-                onClick={() => setFilter('WARNING')}
+                onClick={() => setFilter('SAFE')}
                 className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all duration-150 active:scale-[0.98] ${
-                  filter === 'WARNING' 
-                    ? 'bg-white dark:bg-amber-950 text-amber-800 dark:text-amber-300 shadow-xs border border-amber-200 dark:border-amber-800' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                75% to 84%
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('GOOD')}
-                className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all duration-150 active:scale-[0.98] ${
-                  filter === 'GOOD' 
+                  filter === 'SAFE' 
                     ? 'bg-white dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 shadow-xs border border-emerald-200 dark:border-emerald-800' 
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Safe (85%+)
+                Safe 85%+ ({safeSubjects.length})
               </button>
             </div>
           </div>
@@ -395,7 +329,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
               <BookOpen className="size-5" aria-hidden="true" />
             </div>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">No courses match criteria</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto text-pretty">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               Try modifying your search query or reset the filter to view all enrolled courses.
             </p>
             <button
@@ -408,7 +342,7 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
           </div>
         ) : (
           <>
-            {/* Desktop Table View with Inline Actionable Advice */}
+            {/* Desktop Table View */}
             <div className="overflow-x-auto hidden md:block">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50/80 dark:bg-slate-950/80 text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
@@ -416,105 +350,67 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode }
                     <th scope="col" className="py-3 px-4">Course code</th>
                     <th scope="col" className="py-3 px-4">Course title</th>
                     <th scope="col" className="py-3 px-4">Attendance %</th>
-                    <th scope="col" className="py-3 px-4">85% Cutoff Action</th>
                     <th scope="col" className="py-3 px-4 text-right">Standing</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                  {processedSubjects.map(sub => {
-                    const rec = calculateRecovery(sub);
-                    return (
-                      <tr key={sub.course_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 dark:text-white">
-                          {sub.course_code}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-900 dark:text-slate-200 font-medium">
-                          {sub.subject_name}
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-sm font-mono tabular-nums">
-                          <span className={
-                            sub.attendance_percentage >= 85 ? 'text-emerald-700 dark:text-emerald-400' :
-                            sub.attendance_percentage >= 75 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
-                          }>
-                            {sub.attendance_percentage}%
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {rec.type === 'SHORTAGE' ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
-                              <AlertTriangle className="size-3 text-rose-500 shrink-0" aria-hidden="true" />
-                              <span>Attend <strong>+{rec.needed}</strong> {rec.needed === 1 ? 'class' : 'classes'} for 85%</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
-                              <CheckCircle2 className="size-3 text-emerald-500 shrink-0" aria-hidden="true" />
-                              <span>{rec.canMiss > 0 ? `Can miss ${rec.canMiss} ${rec.canMiss === 1 ? 'class' : 'classes'} safely` : 'At 85% cutoff'}</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          {getStatusBadge(sub.attendance_percentage)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {processedSubjects.map(sub => (
+                    <tr key={sub.course_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 dark:text-white">
+                        {sub.course_code}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-900 dark:text-slate-200 font-medium">
+                        {sub.subject_name}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-sm font-mono tabular-nums">
+                        <span className={
+                          sub.attendance_percentage >= 85 ? 'text-emerald-700 dark:text-emerald-400' :
+                          sub.attendance_percentage >= 75 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
+                        }>
+                          {sub.attendance_percentage}%
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        {getStatusBadge(sub.attendance_percentage)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Cards View */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-              {processedSubjects.map(sub => {
-                const rec = calculateRecovery(sub);
-                return (
-                  <div key={sub.course_code} className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                          {sub.course_code}
-                        </span>
-                        <h3 className="text-sm font-medium text-slate-900 dark:text-white leading-tight mt-1">{sub.subject_name}</h3>
-                      </div>
-                      <span className={`text-base font-bold font-mono tabular-nums shrink-0 ${
-                        sub.attendance_percentage >= 85 ? 'text-emerald-700 dark:text-emerald-400' :
-                        sub.attendance_percentage >= 75 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
-                      }`}>
-                        {sub.attendance_percentage}%
+              {processedSubjects.map(sub => (
+                <div key={sub.course_code} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        {sub.course_code}
                       </span>
+                      <h3 className="text-sm font-medium text-slate-900 dark:text-white leading-tight mt-1">{sub.subject_name}</h3>
                     </div>
-
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden" aria-hidden="true">
-                      <div
-                        className={`h-full ${getBarColor(sub.attendance_percentage)}`}
-                        style={{ width: `${sub.attendance_percentage}%` }}
-                      />
-                    </div>
-
-                    {/* Quick 85% Recovery Counter Banner */}
-                    <div className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
-                      rec.type === 'SHORTAGE' 
-                        ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60 text-rose-900 dark:text-rose-200' 
-                        : 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60 text-emerald-900 dark:text-emerald-200'
+                    <span className={`text-base font-bold font-mono tabular-nums shrink-0 ${
+                      sub.attendance_percentage >= 85 ? 'text-emerald-700 dark:text-emerald-400' :
+                      sub.attendance_percentage >= 75 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
                     }`}>
-                      <div className="flex items-center gap-2">
-                        {rec.type === 'SHORTAGE' ? (
-                          <AlertTriangle className="size-4 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
-                        ) : (
-                          <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
-                        )}
-                        <span className="font-medium">{rec.pillText}</span>
-                      </div>
-                      <span className="font-mono font-bold text-[11px] bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-2xs border border-inherit">
-                        {rec.type === 'SHORTAGE' ? `+${rec.needed}` : `${rec.canMiss} SAFE`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-end pt-1 text-xs">
-                      {getStatusBadge(sub.attendance_percentage)}
-                    </div>
+                      {sub.attendance_percentage}%
+                    </span>
                   </div>
-                );
-              })}
+
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden" aria-hidden="true">
+                    <div
+                      className={`h-full ${getBarColor(sub.attendance_percentage)}`}
+                      style={{ width: `${sub.attendance_percentage}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400">85% BITM Cutoff</span>
+                    {getStatusBadge(sub.attendance_percentage)}
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         )}
