@@ -285,6 +285,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       const { payload, studentCount } = data.offlinePendingPayload;
+      const queueBatchId = data.offlinePendingPayload.id || data.offlinePendingPayload.queuedAt || '';
+
+      const removeIfMatching = async () => {
+        const current = await chrome.storage.local.get(['offlinePendingPayload']);
+        const currentId = current?.offlinePendingPayload?.id || current?.offlinePendingPayload?.queuedAt || '';
+        if (currentId === queueBatchId) {
+          await chrome.storage.local.remove(['offlinePendingPayload']);
+        }
+      };
+
       if (statusBackend) statusBackend.textContent = 'Uploading queue...';
 
       const res = await fetch(`${config.backendUrl}/api/attendance/publish`, {
@@ -297,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       if (res.ok) {
-        await chrome.storage.local.remove(['offlinePendingPayload']);
+        await removeIfMatching();
         if (statusBackend) statusBackend.textContent = 'Connected';
         checkOfflineQueueCard();
 
@@ -308,6 +318,20 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span style="font-size: 11px; opacity: 0.9;">Synced at: ${new Date().toLocaleTimeString()}</span>
         `;
         resultNotice.classList.remove('hidden');
+      } else {
+        if (statusBackend) statusBackend.textContent = 'Connected';
+        const discard = [400, 422].includes(res.status);
+        if (discard) {
+          await removeIfMatching();
+          resultNotice.className = 'result-notice error';
+          resultNotice.textContent = `Queued batch rejected by server (HTTP ${res.status}). Check payload and re-sync.`;
+          resultNotice.classList.remove('hidden');
+        } else {
+          resultNotice.className = 'result-notice warning';
+          resultNotice.textContent = `Server returned HTTP ${res.status} (Destination/Auth/Rate limit). Queued batch preserved in storage.`;
+          resultNotice.classList.remove('hidden');
+        }
+        checkOfflineQueueCard();
       }
     } catch (e) {
       console.warn('[Offline Queue] Upload deferred (server still unreachable):', e);
@@ -406,6 +430,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function handleOneClickWorkflow() {
     if (isProcessing || !activeTab) return;
     isProcessing = true;
+    let validStudents = [];
+    let payload = null;
+    let retriable = false;
 
     btnCollect.disabled = true;
     btnActionText.textContent = 'EXTRACTING...';
@@ -435,7 +462,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Step 2: Strict Client-Side Pre-Publish Validation
       const USN_PATTERN = /^[1-4][A-Z0-9]{2}\d{2}[A-Z0-9]{2,3}\d{2,3}$/i;
-      const validStudents = [];
+      validStudents = [];
       const quarantinedStudents = [];
 
       students.forEach(st => {
@@ -482,7 +509,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateProgress(65, `Publishing ${validStudents.length} validated records (${totalSubjects} subjects) to backend...`);
 
       // Step 3: Push to Backend API
-      const payload = {
+      payload = {
         proctorId: 'proctor-bitm-cse-01',
         semester: validStudents[0]?.semester || 'SEM03',
         sourceUrl: activeTab.url,
@@ -495,16 +522,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       };
 
-      const res = await fetch(`${config.backendUrl}/api/attendance/publish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.proctorToken}`
-        },
-        body: JSON.stringify(payload)
-      });
+      let res;
+      try {
+        res = await fetch(`${config.backendUrl}/api/attendance/publish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.proctorToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (netErr) {
+        retriable = true;
+        throw netErr;
+      }
 
       if (!res.ok) {
+        retriable = res.status >= 500 || [401, 403, 404, 408, 429].includes(res.status);
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || `Backend responded with HTTP ${res.status}`);
       }
@@ -567,10 +601,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('[Contineo Error]:', err);
 
-      // Offline queue fallback
-      if (typeof validStudents !== 'undefined' && validStudents && validStudents.length > 0 && typeof payload !== 'undefined' && payload) {
+      // Offline queue fallback on network transport error or 5xx server downtime
+      if (retriable && payload && validStudents.length > 0) {
         await chrome.storage.local.set({
           offlinePendingPayload: {
+            id: payload.extractedAt || new Date().toISOString(),
             payload,
             queuedAt: new Date().toISOString(),
             studentCount: validStudents.length

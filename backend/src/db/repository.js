@@ -299,6 +299,7 @@ class DataRepository {
 
         const shortageCount = subjects.filter(s => s.attendance_percentage < 85).length;
         const allSafe = subjects.length > 0 && shortageCount === 0;
+        const overallStatus = subjects.length === 0 ? 'NO_DATA' : (allSafe ? 'SAFE' : 'SHORTAGE');
         const overall = subjects.length > 0
           ? Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10
           : 0;
@@ -313,6 +314,8 @@ class DataRepository {
             updated_at: student.updated_at
           },
           overall_percentage: overall,
+          overall_status: overallStatus,
+          overallStatus,
           total_subjects: subjects.length,
           shortage_subjects_count: shortageCount,
           critical_subjects_count: shortageCount, // Alias for shortage (<85%)
@@ -344,6 +347,7 @@ class DataRepository {
 
     const shortageCount = subjects.filter(s => s.attendance_percentage < 85).length;
     const allSafe = subjects.length > 0 && shortageCount === 0;
+    const overallStatus = subjects.length === 0 ? 'NO_DATA' : (allSafe ? 'SAFE' : 'SHORTAGE');
     const overall = subjects.length > 0
       ? Math.round((subjects.reduce((sum, s) => sum + s.attendance_percentage, 0) / subjects.length) * 10) / 10
       : 0;
@@ -351,6 +355,8 @@ class DataRepository {
     return {
       student,
       overall_percentage: overall,
+      overall_status: overallStatus,
+      overallStatus,
       total_subjects: subjects.length,
       shortage_subjects_count: shortageCount,
       critical_subjects_count: shortageCount,
@@ -385,6 +391,7 @@ class DataRepository {
                 percentage: parseFloat(a.attendance_percentage)
               }));
             const allSafe = atts.length > 0 && shortageSubjects.length === 0;
+            const status = atts.length === 0 ? 'NO_DATA' : (allSafe ? 'SAFE' : 'SHORTAGE');
 
             return {
               usn: s.usn,
@@ -395,7 +402,7 @@ class DataRepository {
               shortage_count: shortageSubjects.length,
               shortage_subjects: shortageSubjects,
               all_courses_safe: allSafe,
-              status: allSafe ? 'SAFE' : 'SHORTAGE',
+              status,
               last_updated: s.updated_at
             };
           });
@@ -415,6 +422,7 @@ class DataRepository {
           percentage: parseFloat(a.attendance_percentage)
         }));
       const allSafe = studentAtts.length > 0 && shortageSubjects.length === 0;
+      const status = studentAtts.length === 0 ? 'NO_DATA' : (allSafe ? 'SAFE' : 'SHORTAGE');
 
       return {
         usn: s.usn,
@@ -425,7 +433,7 @@ class DataRepository {
         shortage_count: shortageSubjects.length,
         shortage_subjects: shortageSubjects,
         all_courses_safe: allSafe,
-        status: allSafe ? 'SAFE' : 'SHORTAGE',
+        status,
         last_updated: s.updated_at
       };
     });

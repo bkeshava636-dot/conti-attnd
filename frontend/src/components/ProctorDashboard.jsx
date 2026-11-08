@@ -65,12 +65,12 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
                           st.usn.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
     if (statusFilter === 'SAFE') return st.all_courses_safe;
-    if (statusFilter === 'SHORTAGE') return !st.all_courses_safe;
+    if (statusFilter === 'SHORTAGE') return st.status !== 'NO_DATA' && !st.all_courses_safe;
     return true;
   });
 
   const allSafeCount = roster.filter(s => s.all_courses_safe).length;
-  const shortageCount = roster.filter(s => !s.all_courses_safe).length;
+  const shortageCount = roster.filter(s => s.status !== 'NO_DATA' && !s.all_courses_safe).length;
 
   const exportCSV = () => {
     const headers = "USN,Name,Semester,Course_Standing,Shortage_Courses_Count,Shortage_Subjects_List\n";
@@ -269,7 +269,11 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
                     <td className="py-3.5 px-4 text-slate-900 dark:text-white font-medium">{st.name}</td>
                     <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono">{st.semester}</td>
                     <td className="py-3.5 px-4">
-                      {st.all_courses_safe ? (
+                      {st.status === 'NO_DATA' || st.total_subjects === 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          <span>No subjects recorded</span>
+                        </span>
+                      ) : st.all_courses_safe ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70">
                           <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
                           <span>All Courses Safe</span>
@@ -277,7 +281,7 @@ export default function ProctorDashboard({ onSelectStudent, proctorToken, onRequ
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70">
                           <AlertTriangle className="size-3 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
-                          <span>Shortage in {st.shortage_count || (st.shortage_subjects ? st.shortage_subjects.length : 1)} {st.shortage_count === 1 ? 'course' : 'courses'}</span>
+                          <span>Shortage in {st.shortage_count} {st.shortage_count === 1 ? 'course' : 'courses'}</span>
                         </span>
                       )}
                     </td>

@@ -194,12 +194,14 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode, 
                 Course Status
               </div>
               <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
-                {allCoursesSafe ? 'All Courses Safe' : `Shortage in ${shortageCount} ${shortageCount === 1 ? 'Course' : 'Courses'}`}
+                {subjects.length === 0 ? 'No Data Recorded' : allCoursesSafe ? 'All Courses Safe' : `Shortage in ${shortageCount} ${shortageCount === 1 ? 'Course' : 'Courses'}`}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-[200px]">
-                {allCoursesSafe 
-                  ? 'All registered subjects are at 85% or above' 
-                  : 'Requires attendance improvement below 85%'}
+                {subjects.length === 0
+                  ? 'No subject attendance records available yet'
+                  : allCoursesSafe 
+                    ? 'All registered subjects are at 85% or above' 
+                    : 'Requires attendance improvement below 85%'}
               </p>
             </div>
           </div>
@@ -216,8 +218,8 @@ export default function StudentDashboard({ data, onRefresh, onNotify, darkMode, 
             <span>Course standing</span>
             <ShieldCheck className="size-4 text-slate-400" aria-hidden="true" />
           </div>
-          <div className={`text-2xl font-bold font-mono tabular-nums ${allCoursesSafe ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-            {allCoursesSafe ? 'All Safe' : `${shortageCount} Alert`}
+          <div className={`text-2xl font-bold font-mono tabular-nums ${subjects.length === 0 ? 'text-slate-500 dark:text-slate-400' : allCoursesSafe ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+            {subjects.length === 0 ? 'No Data' : allCoursesSafe ? 'All Safe' : `${shortageCount} Alert`}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">BITM rule: 85% per individual course</p>
         </div>

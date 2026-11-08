@@ -132,8 +132,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         }
       };
 
+      let res = null;
       try {
-        const res = await fetch(`${backendUrl}/api/attendance/publish`, {
+        res = await fetch(`${backendUrl}/api/attendance/publish`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -141,31 +142,31 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
           },
           body: JSON.stringify(payload)
         });
-
-        if (res.ok) {
-          const publishResult = await res.json();
-          console.log(`[Auto-Sync] Successfully synced ${validStudents.length} students at ${new Date().toLocaleTimeString()}`);
-          
-          await chrome.storage.local.remove(['offlinePendingPayload']);
-          await chrome.storage.local.set({
-            lastAutoSyncTimestamp: new Date().toISOString(),
-            lastSyncCount: validStudents.length
-          });
-
-          // Show brief visual feedback on badge
-          await chrome.action.setBadgeText({ text: 'SYNC' });
-          await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
-          setTimeout(async () => {
-            await chrome.action.setBadgeText({ text: 'ON' });
-            await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
-          }, 5000);
-        } else {
-          throw new Error(`HTTP ${res.status}`);
-        }
       } catch (netErr) {
-        console.warn('[Auto-Sync] Cloud offline, caching to offline queue:', netErr.message);
+        res = null;
+      }
+
+      if (res && res.ok) {
+        console.log(`[Auto-Sync] Successfully synced ${validStudents.length} students at ${new Date().toLocaleTimeString()}`);
+        
+        await chrome.storage.local.remove(['offlinePendingPayload']);
+        await chrome.storage.local.set({
+          lastAutoSyncTimestamp: new Date().toISOString(),
+          lastSyncCount: validStudents.length
+        });
+
+        // Show brief visual feedback on badge
+        await chrome.action.setBadgeText({ text: 'SYNC' });
+        await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
+        setTimeout(async () => {
+          await chrome.action.setBadgeText({ text: 'ON' });
+          await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
+        }, 5000);
+      } else if (!res || res.status >= 500 || [401, 403, 404, 408, 429].includes(res.status)) {
+        console.warn(`[Auto-Sync] Server returned ${res ? 'HTTP ' + res.status : 'network error'}, caching to offline queue.`);
         await chrome.storage.local.set({
           offlinePendingPayload: {
+            id: payload.extractedAt || new Date().toISOString(),
             payload,
             queuedAt: new Date().toISOString(),
             studentCount: validStudents.length
@@ -173,6 +174,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         });
         await chrome.action.setBadgeText({ text: 'WAIT' });
         await chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+      } else {
+        console.warn(`[Auto-Sync] Publish rejected by server (HTTP ${res.status}). Discarding rejected payload.`);
       }
     });
 
@@ -187,6 +190,16 @@ async function flushOfflineQueue(backendUrl, proctorToken) {
     if (!data.offlinePendingPayload || !data.offlinePendingPayload.payload) return;
 
     const { payload, studentCount } = data.offlinePendingPayload;
+    const queueBatchId = data.offlinePendingPayload.id || data.offlinePendingPayload.queuedAt || '';
+
+    const removeIfMatching = async () => {
+      const current = await chrome.storage.local.get(['offlinePendingPayload']);
+      const currentId = current?.offlinePendingPayload?.id || current?.offlinePendingPayload?.queuedAt || '';
+      if (currentId === queueBatchId) {
+        await chrome.storage.local.remove(['offlinePendingPayload']);
+      }
+    };
+
     console.log(`[Auto-Sync Worker] Attempting to flush offline queue (${studentCount} students)...`);
 
     const res = await fetch(`${backendUrl}/api/attendance/publish`, {
@@ -199,7 +212,7 @@ async function flushOfflineQueue(backendUrl, proctorToken) {
     });
 
     if (res.ok) {
-      await chrome.storage.local.remove(['offlinePendingPayload']);
+      await removeIfMatching();
       console.log(`[Auto-Sync Worker] Offline queue successfully uploaded to cloud.`);
       await chrome.action.setBadgeText({ text: 'SYNC' });
       await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
@@ -207,6 +220,14 @@ async function flushOfflineQueue(backendUrl, proctorToken) {
         await chrome.action.setBadgeText({ text: 'ON' });
         await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
       }, 5000);
+    } else if (res.status >= 400 && res.status < 500) {
+      const discard = [400, 422].includes(res.status);
+      if (discard) {
+        console.warn(`[Auto-Sync Worker] Queued batch rejected by schema validator (HTTP ${res.status}). Discarding invalid payload.`);
+        await removeIfMatching();
+      } else {
+        console.warn(`[Auto-Sync Worker] Server returned HTTP ${res.status} (Destination/Auth/Rate limit). Preserving offline queue.`);
+      }
     }
   } catch (err) {
     console.warn('[Auto-Sync Worker] Offline flush deferred:', err.message);
