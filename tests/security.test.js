@@ -1,10 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+const app = require('../backend/src/server');
 
 async function runSecurityAudit() {
   console.log('====================================================');
   console.log('  RUNNING COMPREHENSIVE SECURITY & AUDIT SUITE');
   console.log('====================================================');
+
+  // Start in-memory test server on random available port
+  const server = app.listen(0);
+  const { port } = server.address();
+  const baseUrl = `http://localhost:${port}`;
 
   // Check 1: Scan extension files for leaked secrets
   console.log('\n[Security Check 1] Scanning extension source code for leaked secrets...');
@@ -40,7 +46,7 @@ async function runSecurityAudit() {
   console.log('\n[Security Check 2] Testing API endpoint authorization boundaries...');
 
   // 2a: Unauthenticated publish request
-  const unauthRes = await fetch('http://localhost:5000/api/attendance/publish', {
+  const unauthRes = await fetch(`${baseUrl}/api/attendance/publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ students: [] })
@@ -48,12 +54,13 @@ async function runSecurityAudit() {
   console.log(`- Unauthenticated /publish status: HTTP ${unauthRes.status} (Expected: 401)`);
   if (unauthRes.status !== 401) {
     console.error('❌ FAIL: Unauthenticated access permitted!');
+    server.close();
     process.exit(1);
   }
   console.log('✅ PASS: Unauthenticated access blocked (HTTP 401)!');
 
   // 2b: Invalid token publish request
-  const invalidRes = await fetch('http://localhost:5000/api/attendance/publish', {
+  const invalidRes = await fetch(`${baseUrl}/api/attendance/publish`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -64,25 +71,27 @@ async function runSecurityAudit() {
   console.log(`- Forged token /publish status: HTTP ${invalidRes.status} (Expected: 403)`);
   if (invalidRes.status !== 403) {
     console.error('❌ FAIL: Invalid token accepted!');
+    server.close();
     process.exit(1);
   }
   console.log('✅ PASS: Forged token blocked (HTTP 403)!');
 
   // 2c: Test Protected Proctor Roster & Imports Access
   console.log('\n[Security Check 3] Testing that proctor roster and import endpoints are blocked for public/students...');
-  const unauthRoster = await fetch('http://localhost:5000/api/proctor/roster');
-  const unauthImports = await fetch('http://localhost:5000/api/proctor/imports');
+  const unauthRoster = await fetch(`${baseUrl}/api/proctor/roster`);
+  const unauthImports = await fetch(`${baseUrl}/api/proctor/imports`);
   console.log(`- Unauthenticated /proctor/roster status: HTTP ${unauthRoster.status} (Expected: 401)`);
   console.log(`- Unauthenticated /proctor/imports status: HTTP ${unauthImports.status} (Expected: 401)`);
   if (unauthRoster.status !== 401 || unauthImports.status !== 401) {
     console.error('❌ FAIL: Proctor roster/imports accessible without authentication!');
+    server.close();
     process.exit(1);
   }
   console.log('✅ PASS: Public/students are blocked from accessing the proctor roster & imports!');
 
   // 2d: Test Ephemeral Proctor Login
   console.log('\n[Security Check 4] Testing ephemeral proctor session token issuance & validation...');
-  const loginRes = await fetch('http://localhost:5000/api/auth/proctor-login', {
+  const loginRes = await fetch(`${baseUrl}/api/auth/proctor-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ secretKey: 'demo-proctor-secret-key-bitm' })
@@ -91,21 +100,23 @@ async function runSecurityAudit() {
   console.log(`- Ephemeral Token Issued: ${loginData.token.slice(0, 16)}... Expires: ${loginData.expiresAt}`);
   if (!loginData.success || !loginData.token) {
     console.error('❌ FAIL: Ephemeral token generation failed');
+    server.close();
     process.exit(1);
   }
 
   // 2e: Verify /publish and /proctor/roster work with the ephemeral token
-  const authRoster = await fetch('http://localhost:5000/api/proctor/roster', {
+  const authRoster = await fetch(`${baseUrl}/api/proctor/roster`, {
     headers: { 'Authorization': `Bearer ${loginData.token}` }
   });
   console.log(`- Authenticated /proctor/roster status: HTTP ${authRoster.status} (Expected: 200)`);
   if (authRoster.status !== 200) {
     console.error('❌ FAIL: Authenticated proctor could not access roster');
+    server.close();
     process.exit(1);
   }
   console.log('✅ PASS: Authenticated proctor granted access to roster!');
 
-  const ephemeralRes = await fetch('http://localhost:5000/api/attendance/publish', {
+  const ephemeralRes = await fetch(`${baseUrl}/api/attendance/publish`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -125,13 +136,14 @@ async function runSecurityAudit() {
   console.log(`- Ephemeral token /publish status: HTTP ${ephemeralRes.status} (Expected: 200)`);
   if (ephemeralRes.status !== 200) {
     console.error('❌ FAIL: Valid ephemeral session rejected');
+    server.close();
     process.exit(1);
   }
   console.log('✅ PASS: Ephemeral proctor authorization verified successfully!');
 
   // Check 5: Test Malformed and Out-of-Bounds Payload Rejection
   console.log('\n[Security Check 5] Testing malicious / out-of-bounds attendance rejection...');
-  const malformedRes = await fetch('http://localhost:5000/api/attendance/publish', {
+  const malformedRes = await fetch(`${baseUrl}/api/attendance/publish`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -150,9 +162,12 @@ async function runSecurityAudit() {
   console.log(`- Out-of-bounds percentage status: HTTP ${malformedRes.status} (Expected: 422)`);
   if (malformedRes.status !== 422) {
     console.error('❌ FAIL: Out-of-bounds percentage was not rejected!');
+    server.close();
     process.exit(1);
   }
   console.log('✅ PASS: Out-of-bounds attendance rejected (HTTP 422)!');
+
+  server.close();
 
   console.log('\n====================================================');
   console.log('  ALL SECURITY CHECKS PASSED (0 VULNERABILITIES)');

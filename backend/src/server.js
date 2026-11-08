@@ -329,11 +329,15 @@ if (require('fs').existsSync(frontendDist)) {
   });
 }
 
-// Start Server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`====================================================`);
-  console.log(`  Contineo Attendance API Server running on port ${PORT}`);
-  console.log(`  Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`  Test Fixture: http://localhost:${PORT}/fixture`);
-  console.log(`====================================================`);
-});
+// Start Server if executed directly
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`====================================================`);
+    console.log(`  Contineo Attendance API Server running on port ${PORT}`);
+    console.log(`  Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`  Test Fixture: http://localhost:${PORT}/fixture`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = app;

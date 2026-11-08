@@ -1,38 +1,40 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "backend/src/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "backend/**"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "backend/src/server.js"
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
     },
     {
-      "src": "/fixture",
-      "dest": "backend/src/server.js"
+      "source": "/ping",
+      "destination": "/api/index.js"
     },
     {
-      "src": "/test-fixtures/(.*)",
-      "dest": "backend/src/server.js"
+      "source": "/fixture",
+      "destination": "/api/index.js"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "frontend/dist/assets/$1"
+      "source": "/test-fixtures/(.*)",
+      "destination": "/api/index.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "frontend/dist/index.html"
+      "source": "/updates.xml",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/download/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
