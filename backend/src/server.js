@@ -129,6 +129,13 @@ function requireProctorAuth(req, res, next) {
 }
 
 // -----------------------------------------------------------------------------
+// Ultra-Lightweight Keep-Alive Ping (0 overhead, 2-byte response for cron-job)
+// -----------------------------------------------------------------------------
+app.get(['/ping', '/api/ping'], (req, res) => {
+  res.status(200).type('text/plain').send('OK');
+});
+
+// -----------------------------------------------------------------------------
 // Health Check
 // -----------------------------------------------------------------------------
 app.get('/api/health', (req, res) => {
