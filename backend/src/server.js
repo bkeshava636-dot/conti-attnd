@@ -5,14 +5,26 @@ const path = require('path');
 const repo = require('./db/repository');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 const PROCTOR_SECRET_KEY = process.env.PROCTOR_SECRET_KEY || 'demo-proctor-secret-key-bitm';
 const ALLOWED_PROCTOR_KEYS = [
   process.env.PROCTOR_SECRET_KEY,
   'demo-proctor-secret-key-bitm'
 ].filter(Boolean);
 
+// Process crash guards
+process.on('uncaughtException', (err) => {
+  console.error('[Process Safety] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process Safety] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Middlewares
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${req.method} ${req.path}`);
+  next();
+});
 app.use(cors({
   origin: '*', // Allow extension popups, localhost frontend, etc.
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
