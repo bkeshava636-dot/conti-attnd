@@ -10,7 +10,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   
   // Default configuration
   const defaults = {
-    backendUrl: 'https://contineo-attendance-tracker.onrender.com',
+    backendUrl: 'https://conti-attnd.vercel.app',
     proctorToken: 'demo-proctor-secret-key-bitm',
     autoSyncEnabled: false,
     autoSyncInterval: 30, // minutes
@@ -89,7 +89,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       return;
     }
 
-    const backendUrl = config.backendUrl || 'https://contineo-attendance-tracker.onrender.com';
+    const backendUrl = config.backendUrl || 'https://conti-attnd.vercel.app';
     const proctorToken = config.proctorToken || 'demo-proctor-secret-key-bitm';
 
     // Flush any pending offline queue first

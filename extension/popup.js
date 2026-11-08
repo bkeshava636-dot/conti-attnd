@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // State
   let config = {
-    backendUrl: 'https://contineo-attendance-tracker.onrender.com',
+    backendUrl: 'https://conti-attnd.vercel.app',
     proctorToken: 'demo-proctor-secret-key-bitm'
   };
   let activeTab = null;
