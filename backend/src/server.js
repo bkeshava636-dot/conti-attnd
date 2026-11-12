@@ -13,7 +13,7 @@ const ALLOWED_PROCTOR_KEYS = [
 ].filter(Boolean);
 
 // Process crash guards
-process.on('uncaughtException', (err) => {
+process.on('uncaughtExceptionMonitor', (err) => {
   console.error('[Process Safety] Uncaught Exception:', err);
 });
 process.on('unhandledRejection', (reason, promise) => {

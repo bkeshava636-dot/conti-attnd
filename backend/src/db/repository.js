@@ -26,6 +26,11 @@ class DataRepository {
       console.log('[Database] Connecting to Supabase PostgreSQL at:', this.supabaseUrl);
       this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
     } else {
+      if (process.env.VERCEL) {
+        throw new Error(
+          '[Vercel Runtime Configuration Error] SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY) are required on Vercel. Local file store cannot be written in read-only serverless functions.'
+        );
+      }
       console.log('[Database] Supabase credentials not set or local fallback active. Using local JSON store.');
       this.initLocalStore();
     }
