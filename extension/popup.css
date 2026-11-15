@@ -330,6 +330,35 @@ body {
   cursor: not-allowed;
 }
 
+.manual-sync-subtext {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 4px;
+}
+
+.sync-options-divider {
+  display: flex;
+  align-items: center;
+  margin: 12px 0 8px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+}
+
+.sync-options-divider::before,
+.sync-options-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.sync-options-divider span {
+  padding: 0 8px;
+}
+
 /* Minimal Auto-Sync Card */
 .autosync-card {
   background-color: var(--bg-card);

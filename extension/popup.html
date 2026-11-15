@@ -83,11 +83,18 @@
       <button id="btn-sync-offline-queue" class="btn-xs-queue" type="button">Upload Now</button>
     </div>
 
-    <!-- Primary Action Button -->
+    <!-- 1. MANUAL SYNC OPTION -->
     <div class="action-block">
       <button id="btn-collect-publish" class="btn-primary" disabled>
-        <span id="btn-action-text">Sync Contineo Attendance</span>
+        <span style="font-size: 14px;">⚡</span>
+        <span id="btn-action-text">Manual Sync Now</span>
       </button>
+    </div>
+    <div class="manual-sync-subtext">Click anytime to manually extract & publish from current tab</div>
+
+    <!-- 2. AUTO-SYNC OPTIONS -->
+    <div class="sync-options-divider">
+      <span>AUTOMATIC SYNC OPTIONS</span>
     </div>
 
     <!-- Instant Auto-Sync on Page Detection Card -->
@@ -98,11 +105,11 @@
           <span class="slider round"></span>
         </label>
         <div class="autosync-title-wrap">
-          <span class="autosync-title">Page Detect Sync</span>
+          <span class="autosync-title">Auto-Sync on Page Visit</span>
           <span class="autosync-status active" id="page-autosync-status-badge">Active</span>
         </div>
       </div>
-      <span class="autosync-pill-tag">⚡ Instant</span>
+      <span class="autosync-pill-tag">⚡ Auto</span>
     </div>
     <div class="autosync-subtext" id="page-autosync-info-text">
       Automatically pushes attendance whenever you open a Contineo student roster.
@@ -116,7 +123,7 @@
           <span class="slider round"></span>
         </label>
         <div class="autosync-title-wrap">
-          <span class="autosync-title">Background Timer</span>
+          <span class="autosync-title">Periodic Background Timer</span>
           <span class="autosync-status" id="autosync-status-badge">Off</span>
         </div>
       </div>
@@ -131,7 +138,7 @@
       </div>
     </div>
     <div class="autosync-subtext" id="autosync-info-text">
-      Periodically syncs open Contineo tabs in background.
+      Periodically syncs open Contineo tabs on a schedule.
     </div>
 
     <!-- Non-Contineo Helper Box -->

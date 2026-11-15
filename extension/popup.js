@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         valProcessed.textContent = `0/${res.count}`;
 
         btnCollect.disabled = false;
-        btnActionText.textContent = 'Sync Contineo Attendance';
+        btnActionText.textContent = 'Manual Sync Now';
         btnCollect.onclick = handleOneClickWorkflow;
       });
 
@@ -634,7 +634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       btnActionText.textContent = 'Sync Completed ✓';
       setTimeout(() => {
         btnCollect.disabled = false;
-        btnActionText.textContent = 'Re-Sync Attendance';
+        btnActionText.textContent = 'Re-Sync Attendance (Manual)';
         isProcessing = false;
       }, 2500);
 

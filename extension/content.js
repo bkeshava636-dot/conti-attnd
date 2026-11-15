@@ -606,6 +606,76 @@
   }
 
   /**
+   * Display a non-intrusive floating manual sync button on the Contineo webpage
+   * when automatic sync is disabled, allowing the proctor to click-to-sync directly on-page.
+   */
+  function showManualFloatingSyncButton(count) {
+    if (typeof document === 'undefined') return;
+    const existing = document.getElementById('contineo-floating-manual-btn');
+    if (existing) return;
+
+    const btn = document.createElement('div');
+    btn.id = 'contineo-floating-manual-btn';
+    btn.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2147483646;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #3b82f6;
+      border-radius: 9999px;
+      padding: 10px 18px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    `;
+    btn.innerHTML = `
+      <span style="font-size: 15px; color: #60a5fa;">⚡</span>
+      <span>Manual Sync (${count} students)</span>
+      <span style="font-size: 10px; background: rgba(59, 130, 246, 0.2); color: #93c5fd; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 2px;">CLICK TO PUSH</span>
+    `;
+
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = '#1e293b';
+      btn.style.borderColor = '#60a5fa';
+      btn.style.transform = 'translateY(-2px)';
+      btn.style.boxShadow = '0 12px 28px -5px rgba(37, 99, 235, 0.3)';
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = '#0f172a';
+      btn.style.borderColor = '#3b82f6';
+      btn.style.transform = 'translateY(0)';
+      btn.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.4)';
+    });
+
+    btn.addEventListener('click', () => {
+      btn.innerHTML = `<span style="font-size: 15px;">⏳</span><span>Syncing attendance...</span>`;
+      btn.style.pointerEvents = 'none';
+      const report = extractAllStudents(document);
+      chrome.runtime.sendMessage({
+        action: 'AUTO_DETECTED_PAGE_SYNC',
+        report
+      }, (res) => {
+        btn.remove();
+        if (res && res.success) {
+          showInPageToast(res.count, res.queuedOffline);
+        }
+      });
+    });
+
+    document.body.appendChild(btn);
+  }
+
+  /**
    * Automatic Detection & Auto-Sync Engine
    * Fires on page load / DOM mutation when student attendance tables are present.
    */
@@ -617,8 +687,19 @@
 
     try {
       const stored = await chrome.storage.local.get(['pageAutoSyncEnabled']);
-      // Enabled by default unless explicitly disabled
-      if (stored.pageAutoSyncEnabled === false) return;
+      
+      // If Auto-Sync is OFF, offer the in-page Manual Sync button instead
+      if (stored.pageAutoSyncEnabled === false) {
+        const report = extractAllStudents(document);
+        if (report.students && report.students.length > 0) {
+          showManualFloatingSyncButton(report.students.length);
+        }
+        return;
+      }
+
+      // If Auto-Sync is ON, remove any manual floating button
+      const existingManualBtn = document.getElementById('contineo-floating-manual-btn');
+      if (existingManualBtn) existingManualBtn.remove();
 
       const report = extractAllStudents(document);
       if (!report.students || report.students.length === 0) return;
