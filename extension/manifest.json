@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Contineo Attendance Collector",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "update_url": "https://contineo-attendance-tracker.onrender.com/updates.xml",
   "description": "Automated attendance extraction, auto-sync, and publishing for BITM Contineo Proctor Portal.",
   "permissions": [
@@ -13,6 +13,7 @@
   ],
   "host_permissions": [
     "*://*.contineo.in/*",
+    "https://*.vercel.app/*",
     "https://*.onrender.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
@@ -41,6 +42,7 @@
     {
       "matches": [
         "*://*.contineo.in/*",
+        "https://*.vercel.app/*",
         "https://*.onrender.com/*",
         "http://localhost/*",
         "http://127.0.0.1/*",

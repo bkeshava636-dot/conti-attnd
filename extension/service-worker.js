@@ -12,6 +12,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   const defaults = {
     backendUrl: 'https://conti-attnd.vercel.app',
     proctorToken: 'demo-proctor-secret-key-bitm',
+    pageAutoSyncEnabled: true,
     autoSyncEnabled: false,
     autoSyncInterval: 30, // minutes
     lastAutoSyncTimestamp: null,
@@ -54,7 +55,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   }
 });
 
-// Listen for popup messages to control Auto-Sync alarm
+// Listen for popup messages to control Auto-Sync alarm and page detection
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'SET_AUTO_SYNC') {
     const { enabled, intervalMinutes } = message;
@@ -70,7 +71,101 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
     return true;
   }
+
+  if (message.action === 'SET_PAGE_AUTO_SYNC') {
+    chrome.storage.local.set({ pageAutoSyncEnabled: !!message.enabled });
+    console.log(`[Auto-Sync] Page detection auto-sync set to ${!!message.enabled}.`);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.action === 'AUTO_DETECTED_PAGE_SYNC') {
+    handleAutoDetectedSync(message.report, sender.tab).then(sendResponse);
+    return true; // Keep channel open for async response
+  }
 });
+
+/**
+ * Handle auto-detected student attendance from page content script
+ */
+async function handleAutoDetectedSync(report, tab) {
+  if (!report || !report.students || !report.students.length) {
+    return { success: false, error: 'Empty student report' };
+  }
+
+  const validStudents = report.students.filter(s => s.usn && Array.isArray(s.subjects) && s.subjects.length > 0);
+  if (validStudents.length === 0) {
+    return { success: false, error: 'No valid students found in report' };
+  }
+
+  const config = await chrome.storage.local.get(['backendUrl', 'proctorToken']);
+  const backendUrl = config.backendUrl || 'https://conti-attnd.vercel.app';
+  const proctorToken = config.proctorToken || 'demo-proctor-secret-key-bitm';
+
+  const payload = {
+    proctorId: 'proctor-bitm-cse-01',
+    semester: validStudents[0]?.semester || 'SEM03',
+    sourceUrl: tab?.url || report.url || 'https://bitm.contineo.in',
+    extractedAt: new Date().toISOString(),
+    students: validStudents,
+    diagnostics: {
+      autoSync: true,
+      trigger: 'page_detection',
+      totalDetected: report.diagnostics?.totalSectionsDetected || validStudents.length
+    }
+  };
+
+  let res = null;
+  try {
+    res = await fetch(`${backendUrl}/api/attendance/publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${proctorToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    res = null;
+  }
+
+  if (res && res.ok) {
+    console.log(`[Page Auto-Sync] Successfully published ${validStudents.length} students at ${new Date().toLocaleTimeString()}`);
+    await chrome.storage.local.remove(['offlinePendingPayload']);
+    await chrome.storage.local.set({
+      lastAutoSyncTimestamp: new Date().toISOString(),
+      lastSyncCount: validStudents.length,
+      lastReport: report
+    });
+
+    // Visual badge confirmation
+    await chrome.action.setBadgeText({ text: '✓' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
+    setTimeout(async () => {
+      await chrome.action.setBadgeText({ text: 'ON' });
+      await chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
+    }, 4000);
+
+    return { success: true, count: validStudents.length, queuedOffline: false };
+  } else if (!res || res.status >= 500 || [401, 403, 404, 408, 429].includes(res.status)) {
+    console.warn(`[Page Auto-Sync] Server offline or busy, saving to offline queue.`);
+    await chrome.storage.local.set({
+      offlinePendingPayload: {
+        id: payload.extractedAt || new Date().toISOString(),
+        payload,
+        queuedAt: new Date().toISOString(),
+        studentCount: validStudents.length
+      }
+    });
+
+    await chrome.action.setBadgeText({ text: 'WAIT' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+
+    return { success: true, count: validStudents.length, queuedOffline: true };
+  }
+
+  return { success: false, error: `Publish rejected (HTTP ${res ? res.status : 'Unknown'})` };
+}
 
 // Alarm Trigger: Automated Background Extraction
 chrome.alarms.onAlarm.addListener(async (alarm) => {

@@ -90,15 +90,33 @@
       </button>
     </div>
 
-    <!-- Minimal Auto-Sync Strip -->
+    <!-- Instant Auto-Sync on Page Detection Card -->
     <div class="autosync-card">
+      <div class="autosync-left">
+        <label class="switch" title="Auto-sync immediately when student attendance page is detected">
+          <input type="checkbox" id="toggle-page-autosync" checked>
+          <span class="slider round"></span>
+        </label>
+        <div class="autosync-title-wrap">
+          <span class="autosync-title">Page Detect Sync</span>
+          <span class="autosync-status active" id="page-autosync-status-badge">Active</span>
+        </div>
+      </div>
+      <span class="autosync-pill-tag">⚡ Instant</span>
+    </div>
+    <div class="autosync-subtext" id="page-autosync-info-text">
+      Automatically pushes attendance whenever you open a Contineo student roster.
+    </div>
+
+    <!-- Periodic Background Sync Strip -->
+    <div class="autosync-card" style="margin-top: 6px;">
       <div class="autosync-left">
         <label class="switch" title="Toggle periodic auto-sync in background">
           <input type="checkbox" id="toggle-autosync">
           <span class="slider round"></span>
         </label>
         <div class="autosync-title-wrap">
-          <span class="autosync-title">Auto-Sync</span>
+          <span class="autosync-title">Background Timer</span>
           <span class="autosync-status" id="autosync-status-badge">Off</span>
         </div>
       </div>

@@ -523,6 +523,178 @@
     });
   }
 
+  /**
+   * Display a non-intrusive floating toast notification on the Contineo webpage
+   */
+  function showInPageToast(count, queuedOffline = false) {
+    if (typeof document === 'undefined') return;
+
+    const existing = document.getElementById('contineo-autosync-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'contineo-autosync-toast';
+    toast.style.cssText = `
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid ${queuedOffline ? '#f59e0b' : '#10b981'};
+      border-radius: 10px;
+      padding: 11px 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      opacity: 0;
+      pointer-events: auto;
+    `;
+
+    const icon = queuedOffline ? '⏳' : '⚡';
+    const title = queuedOffline ? 'Attendance Queued Offline' : 'Attendance Auto-Synced';
+    const subtext = queuedOffline 
+      ? `${count} students stored locally. Will upload when back online.`
+      : `${count} students updated on BITM Attendance Tracker.`;
+
+    toast.innerHTML = `
+      <div style="font-size: 18px; line-height: 1;">${icon}</div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-weight: 700; color: ${queuedOffline ? '#fbbf24' : '#34d399'}; font-size: 12px; letter-spacing: 0.3px;">${title}</div>
+        <div style="color: #94a3b8; font-size: 11px;">${subtext}</div>
+      </div>
+      <button id="contineo-autosync-close" style="
+        background: transparent;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0 4px;
+        margin-left: 6px;
+        line-height: 1;
+      ">&times;</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.style.transform = 'translateX(0)';
+      toast.style.opacity = '1';
+    });
+
+    function dismissToast(el) {
+      if (!el) return;
+      el.style.transform = 'translateX(120%)';
+      el.style.opacity = '0';
+      setTimeout(() => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }, 350);
+    }
+
+    const closeBtn = toast.querySelector('#contineo-autosync-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => dismissToast(toast));
+    }
+
+    setTimeout(() => dismissToast(toast), 4500);
+  }
+
+  /**
+   * Automatic Detection & Auto-Sync Engine
+   * Fires on page load / DOM mutation when student attendance tables are present.
+   */
+  let isAutoSyncing = false;
+
+  async function checkAndAutoSync() {
+    if (isAutoSyncing) return;
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+
+    try {
+      const stored = await chrome.storage.local.get(['pageAutoSyncEnabled']);
+      // Enabled by default unless explicitly disabled
+      if (stored.pageAutoSyncEnabled === false) return;
+
+      const report = extractAllStudents(document);
+      if (!report.students || report.students.length === 0) return;
+
+      // Fingerprint based on student count, USNs, and attendance values
+      const signature = `${report.students.length}_` + 
+        report.students.slice(0, 10).map(s => `${s.usn}:${s.overallPercentage}:${s.subjects?.length}`).join(';');
+      
+      let lastSignature = null;
+      let lastTime = 0;
+      try {
+        lastSignature = sessionStorage.getItem('contineo_autosync_sig');
+        lastTime = parseInt(sessionStorage.getItem('contineo_autosync_time') || '0', 10);
+      } catch (e) {
+        // sessionStorage restricted in some frames
+      }
+
+      const now = Date.now();
+      // Skip if identical data was synced within the last 3 minutes
+      if (lastSignature === signature && (now - lastTime) < 180000) {
+        return;
+      }
+
+      isAutoSyncing = true;
+      console.log(`[Contineo Extension] Auto-detected attendance page with ${report.students.length} students. Syncing...`);
+
+      chrome.runtime.sendMessage({
+        action: 'AUTO_DETECTED_PAGE_SYNC',
+        report
+      }, (res) => {
+        isAutoSyncing = false;
+        if (chrome.runtime.lastError) {
+          console.warn('[Contineo Extension] Auto-sync message error:', chrome.runtime.lastError.message);
+          return;
+        }
+
+        if (res && res.success) {
+          try {
+            sessionStorage.setItem('contineo_autosync_sig', signature);
+            sessionStorage.setItem('contineo_autosync_time', now.toString());
+          } catch (e) {}
+
+          showInPageToast(res.count, res.queuedOffline);
+        }
+      });
+    } catch (err) {
+      isAutoSyncing = false;
+      console.warn('[Contineo Extension] Auto-detect error:', err);
+    }
+  }
+
+  // Trigger auto-detection on page load and SPA DOM mutations
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => setTimeout(checkAndAutoSync, 800));
+    } else {
+      setTimeout(checkAndAutoSync, 800);
+    }
+
+    let mutationDebounce = null;
+    const observer = new MutationObserver(() => {
+      if (mutationDebounce) clearTimeout(mutationDebounce);
+      mutationDebounce = setTimeout(() => {
+        checkAndAutoSync();
+      }, 1500);
+    });
+
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+      });
+    }
+  }
+
   // Node.js test environment export
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

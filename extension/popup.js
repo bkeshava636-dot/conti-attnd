@@ -57,6 +57,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const countChipSafe = document.getElementById('count-chip-safe');
 
   // Auto-Sync Elements
+  const togglePageAutosync = document.getElementById('toggle-page-autosync');
+  const pageAutosyncStatusBadge = document.getElementById('page-autosync-status-badge');
+  const pageAutosyncInfoText = document.getElementById('page-autosync-info-text');
   const toggleAutosync = document.getElementById('toggle-autosync');
   const selectSyncInterval = document.getElementById('select-sync-interval');
   const autosyncStatusBadge = document.getElementById('autosync-status-badge');
@@ -89,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     'proctorToken', 
     'lastReport',
     'theme',
+    'pageAutoSyncEnabled',
     'autoSyncEnabled',
     'autoSyncInterval',
     'lastAutoSyncTimestamp',
@@ -125,7 +129,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Restore Auto-Sync state
+  // Restore Page-Detect Auto-Sync state (defaults to true)
+  const pageAutoSyncActive = stored.pageAutoSyncEnabled !== false;
+  if (togglePageAutosync) {
+    togglePageAutosync.checked = pageAutoSyncActive;
+    updatePageAutoSyncUI(pageAutoSyncActive);
+  }
+
+  // Restore Background Timer Auto-Sync state
   if (selectSyncInterval && stored.autoSyncInterval) {
     selectSyncInterval.value = stored.autoSyncInterval.toString();
   }
@@ -190,6 +201,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Auto-Sync handlers
+  if (togglePageAutosync) {
+    togglePageAutosync.addEventListener('change', async () => {
+      const enabled = togglePageAutosync.checked;
+      await chrome.storage.local.set({ pageAutoSyncEnabled: enabled });
+      updatePageAutoSyncUI(enabled);
+      chrome.runtime.sendMessage({
+        action: 'SET_PAGE_AUTO_SYNC',
+        enabled
+      });
+    });
+  }
+
+  function updatePageAutoSyncUI(enabled) {
+    if (!pageAutosyncStatusBadge) return;
+    if (enabled) {
+      pageAutosyncStatusBadge.textContent = 'Active';
+      pageAutosyncStatusBadge.className = 'autosync-status active';
+      if (pageAutosyncInfoText) {
+        pageAutosyncInfoText.textContent = 'Auto-syncs immediately whenever you open a Contineo attendance roster.';
+      }
+    } else {
+      pageAutosyncStatusBadge.textContent = 'Off';
+      pageAutosyncStatusBadge.className = 'autosync-status';
+      if (pageAutosyncInfoText) {
+        pageAutosyncInfoText.textContent = 'Page auto-detect is paused. Open popup to sync manually.';
+      }
+    }
+  }
+
   if (toggleAutosync) {
     toggleAutosync.addEventListener('change', handleAutoSyncChange);
   }
